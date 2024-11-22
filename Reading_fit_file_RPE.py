@@ -1,11 +1,13 @@
 import fitparse
 import csv 
 import os
+import pandas as pd
+import numpy as np
 
 
 '''Conversion of a .fit file into a .csv file'''
 # Choose before running the code
-ID = 3
+ID = 8
 Setup = 'bicycle'
 test = 'protocol'
 
@@ -13,21 +15,38 @@ if ID < 10:
     file_input= f'00{ID}\\Zwift\\00{ID}_{Setup}_{test}.fit' #Path of the input .fit file
     directory = f'00{ID}\\Zwift' #Path of the folder which will contain the output .csv file
     file_output = f'00{ID}_{Setup}_{test}.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
+    ID_number = f"00{ID}"
 else:
     file_input= f'0{ID}\\Zwift\\0{ID}_{Setup}_{test}.fit' #Path of the input .fit file
     directory = f'0{ID}\\Zwift' #Path of the folder which will contain the output .csv file
     file_output = f'0{ID}_{Setup}_{test}.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
+    ID_number = f"0{ID}"
 
 # Importing the file
 fitfile = fitparse.FitFile(file_input)
 # Reported RPE values
-RPE_15 = 8
-RPE_20 = 10
-RPE_35 = 12
-RPE_cooldown = 'Cooldown'
+RPE_Warmup = "Warmup"
+RPE_15 = 10
+RPE_20 = 12
+RPE_35 = 14
+RPE_Cooldown = 'Cooldown'
+
+RPE_Warmups = np.linspace(6, 11, 5*60)
+RPE_Cooldowns = np.linspace(10, 7, 4 * 60)
 
 # Importing the file
 fitfile = fitparse.FitFile(file_input)
+# Importing the IMU Data
+if Setup == "handcycle":
+    IMU_limb = f"{ID_number}_{Setup}_wrist_{test}_processed"
+    IMU_crank = f"{ID_number}_{Setup}_crank_{test}_processed"
+elif Setup == "bicycle":
+    IMU_limb = pd.read_csv(f"{ID_number}\\Processed Data\\{ID_number}_{Setup}_ankle_{test}_processed.csv")
+    IMU_crank = pd.read_csv(f"{ID_number}\\Processed Data\\{ID_number}_{Setup}_crank_{test}_processed.csv")
+    print("IMU_limb ha dimensione: ", IMU_limb.shape)
+    # print("IMU_crank ha dimensione: ", IMU_crank.shape)
+    # They have the same dimension, a certain amount of rows and 7 columns
+
 
 # Initializing the arrays which will contain data for the whole acquisition
 timestamps = []
@@ -102,30 +121,48 @@ for record in fitfile.get_messages("record"):
     if speed is not None:
         speeds.append(speed)
     if altitude is not None:
-        altitudes.append(altitude)
+        if c == 0:
+            altitudes.append(altitude)
+            c = c + 1
+        if c > 0:
+            altitudes.append(altitude - altitudes[0])
+            c = c + 1
+
+print("altitude is: ", type(altitudes), "and its size is:", len(altitudes))
+print("c is: ", c)
+print("altitude has values: ", altitudes)
+        
 
 
 # Save the data into a .csv file
 csv_file = os.path.join(directory, file_output)
+print("Il file .fit ha lunghezza", len(timestamps))
 
 if test == "protocol":
     for i in range(0, len(timestamps)):
-        if i <= 5 * 60: # Warm up range
-            RPE.append("Warm Up")
-        if i > 5 * 60 and i <= 8 * 60: 
+        if i < 5 * 60: # Warm up range
+            RPE.append(RPE_Warmups[i])
+            # RPE.append(RPE_Warmup)
+        if i >= 5 * 60 and i < 8 * 60: 
             RPE.append("12")
-        if i > 8 * 60 and i <= 11 * 60:
+        if i >= 8 * 60 and i < 11 * 60:
             RPE.append("14")
-        if i > 11 * 60 and i <= 14 * 60:
+        if i >= 11 * 60 and i < 14 * 60:
             RPE.append("15")
-        if i > 14 * 60 and i <= 17 * 60:
+        if i >= 14 * 60 and i < 17 * 60:
+            # RPE.append(RPE_15[i - 14*60])
             RPE.append(RPE_15)
-        if i > 17 * 60 and i <= 20 * 60:
+        if i >= 17 * 60 and i < 20 * 60:
             RPE.append(RPE_20)
-        if i > 20 *60 and i <= 23 * 60:
+        if i >= 20 *60 and i < 23 * 60:
             RPE.append(RPE_35)
-        if i > 23 * 60:
-            RPE.append(RPE_cooldown)
+        if i >= 23 * 60 and i < 27 * 60:
+            RPE.append(RPE_Cooldowns[i - 23*60]-1)
+            # RPE.append(RPE_Cooldown)
+        if i >= 27*60:
+            RPE.append(RPE_Cooldowns[-1]) # if they give a range
+            # RPE.append(RPE_Cooldown)
+
 
     with open(csv_file, mode='w', newline='') as file:
         writer = csv.writer(file)

@@ -5,9 +5,9 @@ import os
 import csv
 
 # Importing IMU data
-ID = 3
+ID = 8
 test = 'protocol' # FTP or protocol
-setup = 'handcycle' # handcycle or bicycle
+setup = 'bicycle' # handcycle or bicycle
 
 if setup == 'bicycle':
     limb = 'ankle'
@@ -53,11 +53,14 @@ IMU_2[0, 0] = 0
 # Visualizing data and finding the delay
 fig, (ax1, ax2) = plt.subplots(2)
 ax1.plot(IMU_1[200:1000, 0], IMU_1[200:1000, 1])
+ax1.set_title("Crank sensor")
 ax2.plot(IMU_2[200:1000, 0], IMU_2[200:1000, 1])
-
+ax2.set_title(f"Sensor on the {limb}")
 mplcursors.cursor(ax1, hover = 'True')
 mplcursors.cursor(ax2, hover = 'True')
 
+fig.suptitle("Select two peaks to find the delay")
+plt.tight_layout()
 plt.show()
 
 print("Insert the x value for the peak chosen for the first signal")
@@ -82,13 +85,18 @@ if diff < 0:
     for i in range(1, len(IMU_1)):
         IMU_2[i, 0] = (IMU_2[i, 0] - IMU_2[0, 0])
 
-'''# Check if signals are actually aligned
+# Check if signals are actually aligned
 fig2, (ax1, ax2) = plt.subplots(2)
 ax1.plot(IMU_1[200:1000, 0], IMU_1[200:1000, 1])
+ax1.set_title("Crank sensor")
 ax2.plot(IMU_2[200:1000, 0], IMU_2[200:1000, 1])
+ax2.set_title(f"Sensor on the {limb}")
 mplcursors.cursor(ax1, hover = 'True')
 mplcursors.cursor(ax2, hover = 'True')
-plt.show()'''
+
+fig2.suptitle("Check if signals are correctly aligned")
+plt.tight_layout()
+plt.show()
 
 
 
@@ -96,11 +104,14 @@ plt.show()'''
 # Select the beginning of cycling phase 
 fig, (ax1, ax2) = plt.subplots(2)
 ax1.plot(IMU_1[0:round(len(IMU_1)/2), 0], IMU_1[0:round(len(IMU_1)/2), 1])
+ax1.set_title("Crank sensor, first half")
 ax2.plot(IMU_2[round(len(IMU_1)/2):, 0], IMU_2[round(len(IMU_1)/2):, 1])
-
+ax1.set_title("Crank sensor, last half")
 mplcursors.cursor(ax1, hover = 'True')
 mplcursors.cursor(ax2, hover = 'True')
 
+fig.suptitle("Select beginning and end of cycling phase")
+plt.tight_layout()
 plt.show()
 
 print("Insert the x value for the beginning of the cycling phase")
@@ -110,8 +121,8 @@ tail = round(float(input()) * fs)
 
 IMU_1 = IMU_1[samples:tail, :]
 IMU_2 = IMU_2[samples:tail, :]
-print("IMU Data are:", IMU_1, IMU_2)
-print("IMU Data sizes are:", IMU_1.shape)
+# print("IMU Data are:", IMU_1, IMU_2)
+# print("IMU Data sizes are:", IMU_1.shape)
 
 
 # Creating a .csv file containing the new signal
@@ -150,9 +161,9 @@ processed_2 = processed_2.to_numpy()
 timestamps_1 = processed_1[:, 0]
 timestamps_2 = processed_2[:, 0]
 
-print("Timestamps are: ", type(timestamps_1))
-
 ax1.plot(timestamps_1, processed_1[:, 1])
 ax2.plot(timestamps_2, processed_2[:, 1])
 
-# plt.show()
+plt.tight_layout()
+fig.suptitle("Aligned and cleaned signals")
+plt.show()
