@@ -140,8 +140,9 @@ if case == "Full signal":
         t2 = np.linspace(0, len(power_bc), num = len(power_bc))
         plt.figure()
         plt.plot(t1, power_hc)
+        plt.plot(t1, new_hc)
         plt.plot(t2, power_bc)
-        plt.legend(["Handcycle", "Bicycle"])
+        plt.legend(["Handcycle", "Tweaked signal", "Bicycle"])
         plt.title(f"Subject {ID}")
 
 

@@ -10,7 +10,7 @@ ID = 4
 Setup = 'bicycle'
 test = 'protocol'
 
-'''if ID < 10:
+if ID < 10:
     file_input= f'00{ID}\\Zwift\\00{ID}_{Setup}_{test}.fit' #Path of the input .fit file
     directory = f'00{ID}\\Zwift' #Path of the folder which will contain the output .csv file
     file_output = f'00{ID}_{Setup}_{test}.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
@@ -18,10 +18,7 @@ else:
     file_input= f'0{ID}\\Zwift\\0{ID}_{Setup}_FTP.fit' #Path of the input .fit file
     directory = f'0{ID}\\Zwift' #Path of the folder which will contain the output .csv file
     file_output = f'0{ID}_{Setup}_{test}.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
-'''
-file_input = "Prova_heart_rate_2.fit"
-directory = ""
-file_output = "Prova_heart_rate_2.csv"
+
 # Importing the file
 fitfile = fitparse.FitFile(file_input)
 
@@ -37,7 +34,6 @@ speed_avatars = []
 # speed_wheel = np.zeros(len(file_input))
 altitudes = []
 fields = []
-
 
 # Reading the file and storing the values inside the variables
 for record in fitfile.get_messages("record"):    
