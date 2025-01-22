@@ -9,7 +9,7 @@ import math
 
 # Decay model
 # subjects = [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-subjects = [0]
+subjects = [10]
 
 for i in range(0, len(subjects)):
     ID = subjects[i]
@@ -18,9 +18,9 @@ for i in range(0, len(subjects)):
     else:
         ID = f"0{ID}"
 
-    path = " "
-    data_hc = pd.read_csv(f"{path}\\{ID}_handcycle_protocol_filtered")
-    Power_hc = data_hc[:, 7]
+    path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\Protocol\\Processed Data\\Filtered Power"
+    Power_hc = data_hc
+    data_hc = pd.read_csv(f"{path}\\{ID}_handcycle_filtered_power.csv")
     HR = data_hc[:, 4]
     RPE = data_hc[:, 10]
     time = np.linspace(0, len(Power_hc), len(Power_hc))
@@ -28,6 +28,7 @@ for i in range(0, len(subjects)):
     data_bc = pd.read_csv(f"{path}\\{ID}_bicycle_protocol_filtered")
     Power_bc = data_bc[:, 7]
 
+    
     # Define the model with HR and RPE as multiplicative factors
     def model(t, alpha, gamma, delta_hr, delta_rpe):
         return alpha * Power_hc[0] * (1 - gamma * t) * (1 + delta_hr * HR) * (1 + delta_rpe * RPE)
@@ -47,6 +48,7 @@ for i in range(0, len(subjects)):
     plt.xlabel('Time (minutes)')
     plt.ylabel('Power (W)')
     plt.show()
+    plt.title("Decay model - linear")
 
     popt_fitted = popt
 
@@ -70,6 +72,7 @@ for i in range(0, len(subjects)):
     plt.xlabel('Time (minutes)')
     plt.ylabel('Power (W)')
     plt.show()
+    plt.title("Decay model, exponential")
 
     popt_exponential = popt
 
