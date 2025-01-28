@@ -7,12 +7,12 @@ from openpyxl import load_workbook
 import Extract_HR_Features
 
 # Participant details
-ID = 15
-Gender = 0 #0 for males, 1 for females
-Age = 21
-Weight = 73
-Height = 176
-max_HR = 199
+ID = 16
+Gender = 1 #0 for males, 1 for females
+Age = 25
+Weight = 59
+Height = 173
+max_HR = 195
 
 
 if ID < 10:
@@ -20,7 +20,7 @@ if ID < 10:
 else:
     ID = f"0{ID}"
 
-# Filter deatils
+# Filter details
 window_size = 15
 
 #-----------------------------------------------------------------------------------------------------------------------------------------
@@ -32,16 +32,17 @@ data = data[300:840]
 power_hc = np.array(data["Power"])
 HR = np.array(data["Heart Rate"])
 RPE = np.array(data["RPE"])
+RPE = RPE.astype(int)
 # Moving average filter
 window = np.ones(window_size) / window_size
 window = window.flatten()
 power_hc = power_hc.flatten()
-data_filtered = np.convolve(power_hc, window, mode = "same")
+power_hc = np.convolve(power_hc, window, mode = "same")
 # Plotting the signal
 t = np.linspace(300, 840, num = len(power_hc))
 plt.figure()
 plt.plot(t, data["Power"])
-plt.plot(t, data_filtered)
+plt.plot(t, power_hc)
 plt.xlabel("Time [s]")
 plt.ylabel("Power output [W]")
 plt.title(f"Subject {ID}, {setup}")
@@ -63,10 +64,10 @@ power_bc = np.array(data)
 window = np.ones(window_size) / window_size
 window = window.flatten()
 power_bc = power_bc.flatten()
-data_filtered_bc = np.convolve(power_bc, window, mode = "same")
+power_bc = np.convolve(power_bc, window, mode = "same")
 
-data_filtered = data_filtered[1: -1]
-data_filtered_bc = data_filtered_bc[1: -1]
+data_filtered = power_hc[1: -1]
+data_filtered_bc = power_bc[1: -1]
 
 
 # Two subplots
@@ -111,7 +112,7 @@ Col_B = [' ', Gender, Age, Weight, Height, max_HR]
 Col_A.extend([' '] * (len(power_hc) - len(Col_A)))
 Col_B.extend([' '] * (len(power_hc) - len(Col_B)))
 
-writer = pd.ExcelWriter(f'{path}\\{ID}_input_file', engine = "openpyxl")
+writer = pd.ExcelWriter(f'{path}\\{ID}_input_file.xlsx', engine = "openpyxl")
 wb = writer.book
 df = pd.DataFrame({'P info': Col_A, ' ' : Col_B, 'Heart Rate': HR, 'RPE': RPE, 'Power hc': power_hc, 'Power bc': power_bc})
 features_hr = pd.DataFrame([features_hr])
@@ -119,7 +120,7 @@ df = pd.concat([df, features_hr], axis = 1)
 df = df.fillna(' ')
 
 df.to_excel(writer, index = False)
-wb.save(f'{path}\\{ID}_input_file_prova.xlsx')
+wb.save(f'{path}\\{ID}_input_file.xlsx')
 
 # If you ever only want to save power in your .csv file
 '''csv_file = os.path.join(directory, f"{ID}_filtered_power")
