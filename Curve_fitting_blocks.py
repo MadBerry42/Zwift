@@ -4,44 +4,44 @@
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import pandas as pd
 import Statistical_analysis
 
 # Decay model
-# subjects = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-subjects = [11]
+subjects = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+# subjects = [8, 9]
 
-for i in range(0, len(subjects)):
-    ID = subjects[i]
+for j in range(0, len(subjects)):
+    ID = subjects[j]
     if ID < 10:
         ID = f"00{ID}"
     else:
         ID = f"0{ID}"
 
     path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\Protocol\\Processed Data\\Input to model"
-    # data = pd.read_excel(f"{path}\\{ID}_input_file.xlsx")
-    data = pd.read_csv("Fake_data.csv")
-    HR = data.iloc[1:541, 0]
-    RPE = data.iloc[1:541, 1]
-    Power_hc = data.iloc[1:541, 2]
-    Power_bc = data.iloc[1:541, 3].to_numpy()
+    data = pd.read_excel(f"{path}\\{ID}_input_file.xlsx")
+    # data = pd.read_csv("Fake_data.csv")
+    HR = data.iloc[:, 2]
+    RPE = data.iloc[:, 3]
+    Power_hc = data.iloc[:, 4]
+    Power_bc = data.iloc[:, 5].to_numpy()
     time = np.linspace(0, 540, len(Power_hc))
-    # Age = data.iloc[2, 1]
-    # Weight = data.iloc[3, 1]
-    # Height = data.iloc[4, 1]/100
 
-    Age = 25
-    Weight = 58
-    Height = 1.6
+    Gender = data.iloc[1, 1]
+    Age = data.iloc[2, 1]
+    Weight = data.iloc[3, 1]
+    Height = data.iloc[4, 1]/100
+
 
 #------------------------------------------------------------------------------------------------------------------
     # Linear model
 #------------------------------------------------------------------------------------------------------------------
     # Define the model with alpha = Average power ratio
     alpha_array = np.zeros(3)
-    for i in range(2):
-        avg_power_hc = np.mean(Power_hc[i * 180 : (i+1) * 180 - 1])
-        avg_power_bc = np.mean(Power_bc[i * 180 : (i+1) * 180 - 1])
+    for i in range(3):
+        avg_power_hc = np.mean(Power_hc[i * 180 : (i+1) * 180])
+        avg_power_bc = np.mean(Power_bc[i * 180 : (i+1) * 180])
         alpha_array[i] = avg_power_bc/avg_power_hc
     
     alpha = np.mean(alpha_array)
@@ -54,12 +54,14 @@ for i in range(0, len(subjects)):
 
     # Plot the signal
     fig, axs = plt.subplots(2, 2)
+    fig.suptitle(f"Models vs bicycle, participant {ID}")
     axs[0, 0].plot(time, Power_bc, label="Observed bicycle power")
     axs[0, 0].plot(time, Model_linear, label="Linear model")
     axs[0, 0].set_xlabel("Time [s]")
     axs[0, 0].set_ylabel("Power [W]")
-    axs[0, 0].set_title(f"Linear Model, participant {ID}")
+    axs[0, 0].set_title(f"Linear Model")
     axs[0, 0].legend()
+
     # plt.show()
 
     Linear_parameters = alpha_array
@@ -104,13 +106,14 @@ for i in range(0, len(subjects)):
     axs[1, 0].legend()
     axs[1, 0].set_xlabel('Time [s]')
     axs[1, 0].set_ylabel('Power [W]')
-    axs[1, 0].set_title(f"Simple decay model, participant {ID}")
+    axs[1, 0].set_title(f"Simple decay model")
     # plt.show()
 
     # Save the values
-    Model_simple_decay = Model_hc
+    Model_simple_decay = Model_hc.copy()
     Simple_decay_parameters = alpha_array, gamma_array
-    Simple_decay_average = alpha, gamma
+    Simple_decay_parameters = np.array(Simple_decay_parameters)
+    Simple_decay_averages = alpha, gamma
 
 
 
@@ -128,13 +131,13 @@ for i in range(0, len(subjects)):
     delta_hr_array = np.zeros(3)
     delta_rpe_array = np.zeros(3)
     for i in range(3):
-        Power_hc = Power_hc_or[i * 180 : (i+1) * 180 - 1]
-        HR = HR_or[i * 180 : (i+1) * 180 - 1]
-        RPE = RPE_or[i * 180 : (i+1) * 180 - 1]
+        Power_hc = Power_hc_or[i * 180 : (i+1) * 180]
+        HR = HR_or[i * 180 : (i+1) * 180]
+        RPE = RPE_or[i * 180 : (i+1) * 180]
 
-        popt, pcov = curve_fit(model, time[i * 180 : (i+1) * 180 - 1], Power_bc[i * 180 : (i+1) * 180 - 1], p0=[0.1, 0.001, 0.001, 0.001], maxfev = 10000)
+        popt, pcov = curve_fit(model, time[i * 180 : (i+1) * 180], Power_bc[i * 180 : (i+1) * 180], p0=[0.1, 0.001, 0.001, 0.001], maxfev = 10000)
         alpha_array[i], gamma_array[i], delta_hr_array[i], delta_rpe_array[i]  = popt
-        Model_hc[i * 180 : (i+1) * 180 - 1] = model(time[i * 180 : (i+1) * 180 - 1], *popt)
+        Model_hc[i * 180 : (i+1) * 180] = model(time[i * 180 : (i+1) * 180], *popt)
 
     alpha = np.mean(alpha_array)
     gamma = np.mean(gamma_array)
@@ -154,12 +157,13 @@ for i in range(0, len(subjects)):
     axs[0, 1].legend()
     axs[0, 1].set_xlabel('Time [s]')
     axs[0, 1].set_ylabel('Power [W]')
-    axs[0, 1].set_title(f"Decay model - multiplicative, participant {ID}")
+    axs[0, 1].set_title(f"Decay model - multiplicative adjustment")
     # plt.show()
 
     Model_multiplicative = Model_hc
-    Multiplicative_decay_parameters = alpha_array, gamma_array, delta_hr_array, delta_rpe_array
-    Multiplicative_decay_average = alpha, gamma, delta_hr, delta_rpe
+    Multiplicative_parameters = alpha_array, gamma_array, delta_hr_array, delta_rpe_array
+    Multiplicative_parameters = np.array(Multiplicative_parameters)
+    Multiplicative_averages = alpha, gamma, delta_hr, delta_rpe
 
 
 #------------------------------------------------------------------------------------------------------------------
@@ -177,13 +181,13 @@ for i in range(0, len(subjects)):
     delta_rpe_array = np.zeros(3)
     Model_hc = np.zeros(len(Power_hc_or))
     for i in range(3):
-        Power_hc = Power_hc_or[i * 180 : (i+1) * 180 - 1]
-        HR = HR_or[i * 180 : (i+1) * 180 - 1]
-        RPE = RPE_or[i * 180 : (i+1) * 180 - 1]
+        Power_hc = Power_hc_or[i * 180 : (i+1) * 180]
+        HR = HR_or[i * 180 : (i+1) * 180]
+        RPE = RPE_or[i * 180 : (i+1) * 180]
 
-        popt, pcov = curve_fit(model, time[i * 180 : (i+1) * 180 - 1], Power_bc[i * 180 : (i+1) * 180 - 1], p0=[0.1, 0.01, 0.0001, 0.0001], maxfev = 10000)#
+        popt, pcov = curve_fit(model, time[i * 180 : (i+1) * 180], Power_bc[i * 180 : (i+1) * 180], p0=[0.1, 0.01, 0.0001, 0.0001], maxfev = 10000)#
         alpha_array[i], gamma_array[i], delta_hr_array[i], delta_rpe_array[i]   = popt
-        Model_hc[i * 180 : (i+1) * 180 - 1] = model(time[i * 180 : (i+1) * 180 - 1], *popt)
+        Model_hc[i * 180 : (i+1) * 180] = model(time[i * 180 : (i+1) * 180], *popt)
 
     alpha = np.mean(alpha_array)
     gamma = np.mean(gamma_array)
@@ -205,13 +209,25 @@ for i in range(0, len(subjects)):
     axs[1, 1].legend()
     axs[1, 1].set_xlabel('Time [s]')
     axs[1, 1].set_ylabel('Power [W]')
-    axs[1, 1].set_title(f"Decay model - exponential: HR and RPE, participant {ID}")
-    
+    axs[1, 1].set_title(f"Decay model - exponential")
+
+    for ax in axs.flatten():
+        ax.axvspan(0, 179, color = "green", alpha = 0.2)
+        ax.axvspan(180, 359, color = "yellow", alpha = 0.2)
+        ax.axvspan(360, 540, color = "red", alpha = 0.2)
+
+        green_patch = mpatches.Patch(color='green', alpha=0.2, label='Low effort')
+        yellow_patch = mpatches.Patch(color='yellow', alpha=0.2, label='Medium effort')
+        red_patch = mpatches.Patch(color='red', alpha=0.2, label='High effort')
+
+
+
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
     Model_exponential = Model_hc
-    Exponential_Parameters = alpha_array, gamma_array, delta_hr_array, delta_rpe_array
+    Exponential_parameters = alpha_array, gamma_array, delta_hr_array, delta_rpe_array
+    Exponential_parameters = np.array(Exponential_parameters)
     Exponential_averages = alpha, gamma, delta_hr, delta_rpe
 
 
@@ -232,23 +248,31 @@ for i in range(0, len(subjects)):
 
     a, b, y_fit, CI_a, CI_b = Statistical_analysis.olp_line(Power_bc, Power_hc)
     fig, axs = plt.subplots(2, 2)
-    fig.suptitle("OLP line")
+    fig.suptitle(f"OLP line, participant {ID}")
+    plt.tight_layout()
     axs[0, 0].scatter(Power_bc, Power_hc, c = 'orange', label = "Data")
     axs[0, 0].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[0, 0].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
     axs[0, 0].legend(loc = "upper left", fontsize = "small")
     axs[0, 0].set_title(f"Linear model, a = {a:.2f}, b = {b:.2f}")
-    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of {CI_a} for a and {CI_b} for b")
+    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
     dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
     fig2, axs2 = plt.subplots(2, 2)
-    fig2.suptitle("Bland-Altman Plot")
+    fig2.suptitle(f"Bland-Altman Plot, participant {ID}")
     axs2[0, 0].plot((Power_bc + Power_hc)/2, (Power_bc - Power_hc)/2, '*')
     axs2[0, 0].axhline(y = dxy, color = "b")
     axs2[0, 0].axhline(y = lim_sup, linestyle = "-.")
     axs2[0, 0].axhline(y = lim_inf, linestyle = "-.")
     axs2[0, 0].set_title("Linear model")
+
+    # For the Excel file
+    Col_residuals = [f"Sum: {sum_residuals:.3f}", f"Max: {max(residuals):.3f}", " ", " "]
+    Col_MSE = [f"MSE = {MSE:.3f}", f"RMSE = {RMSE:.3f}",  " ", " "]
+    Col_OLP = [f"b = {b:.3f}", f"a = {a:.3f}", f"CI_a = [{CI_a[0]:.3f}, {CI_a[1]:.3f}]", f"CI_b = [{CI_b[0]:.3f}, {CI_b[1]:.3f}]"]
+    Col_BA = [f"Mean difference is: {dxy:.3f}", f"Deviation is: {2*Sxy:.3f}", " ", " "]
+
 
 
     # Simple decay model
@@ -267,8 +291,8 @@ for i in range(0, len(subjects)):
     axs[1, 0].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[1, 0].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
     axs[1, 0].legend(loc = "upper left", fontsize = "small")
-    axs[1, 0].set_title(f"Linear model, a = {a:.2f}, b = {b:.2f}")
-    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of {CI_a} for a and {CI_b} for b")
+    axs[1, 0].set_title(f"Simple decay, a = {a:.2f}, b = {b:.2f}")
+    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
     dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
@@ -277,6 +301,13 @@ for i in range(0, len(subjects)):
     axs2[1, 0].axhline(y = lim_sup, linestyle = "-.")
     axs2[1, 0].axhline(y = lim_inf, linestyle = "-.")
     axs2[1, 0].set_title("Simple decay model")
+
+    # For the Excel file
+    Col_residuals = Col_residuals + [f"Sum: {sum_residuals:.3f}", f"Max: {max(residuals):.3f}", " ", " "]
+    Col_MSE = Col_MSE + [f"MSE = {MSE:.3f}", f"RMSE = {RMSE:.3f}", " ", " "]
+    Col_OLP = Col_OLP + [f"b = {b:.3f}", f"a = {a:.3f}", f"CI_a = [{CI_a[0]:.3f}, {CI_a[1]:.3f}]", f"CI_b = [{CI_b[0]:.3f}, {CI_b[1]:.3f}]"]
+    Col_BA = Col_BA + [f"Mean difference is: {dxy:.3f}", f"Deviation is: {2*Sxy:.3f}", " ", " "]
+
 
     # Multiplicative decay model
     Power_hc = Model_multiplicative
@@ -294,8 +325,8 @@ for i in range(0, len(subjects)):
     axs[0, 1].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[0, 1].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
     axs[0, 1].legend(loc = "upper left", fontsize = "small")
-    axs[0, 1].set_title(f"Linear model, a = {a:.2f}, b = {b:.2f}")
-    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f},, with a Confidence Interval at 95% of {CI_a} for a and {CI_b} for b")
+    axs[0, 1].set_title(f"Multiplicative adjustment model, a = {a:.2f}, b = {b:.2f}")
+    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
     dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
@@ -304,6 +335,13 @@ for i in range(0, len(subjects)):
     axs2[0, 1].axhline(y = lim_sup, linestyle = "-.")
     axs2[0, 1].axhline(y = lim_inf, linestyle = "-.")
     axs2[0, 1].set_title("Multiplicative decay model")
+
+    # For the Excel file
+    Col_residuals = Col_residuals + [f"Sum: {sum_residuals:.3f}", f"Max: {max(residuals):.3f}", " ", " "]
+    Col_MSE = Col_MSE + [f"MSE = {MSE:.3f}", f"RMSE = {RMSE:.3f}", " ", " "]
+    Col_OLP = Col_OLP + [f"b = {b:3f}", f"a = {a:3f}", f"CI_a = [{CI_a[0]:.3f}, {CI_a[1]:.3f}]", f"CI_b = [{CI_b[0]:.3f}, {CI_b[1]:.3f}]"]
+    Col_BA = Col_BA + [f"Mean difference is: {dxy:.3f}", f"Deviation is: {2*Sxy:.3f}", " ", " "]
+
 
     # Exponential model
     Power_hc = Model_exponential
@@ -321,8 +359,8 @@ for i in range(0, len(subjects)):
     axs[1, 1].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[1, 1].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
     axs[1, 1].legend(loc = "upper left", fontsize = "small")
-    axs[1, 1].set_title(f"Linear model, a = {a:.2f}, b = {b:.2f}")
-    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of {CI_a} for a and {CI_b} for b")
+    axs[1, 1].set_title(f"Exponential model, a = {a:.2f}, b = {b:.2f}")
+    print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
     dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
@@ -330,10 +368,17 @@ for i in range(0, len(subjects)):
     axs2[1, 1].axhline(y = dxy, color = "b")
     axs2[1, 1].axhline(y = lim_sup, linestyle = "-.")
     axs2[1, 1].axhline(y = lim_inf, linestyle = "-.")
-    axs2[1, 1].set_title("Exponential decay model")
+    axs2[1, 1].set_title(f"Exponential decay model")
+
+    # For the Excel file
+    Col_residuals = Col_residuals + [f"Sum: {sum_residuals:.3f}", f"Max: {max(residuals):.3f}", " ", " "]
+    Col_MSE = Col_MSE + [f"MSE = {MSE:.3f}", f"RMSE = {RMSE:.3f}", " ", " "]
+    Col_OLP = Col_OLP + [f"b = {b:3f}", f"a = {a:3f}", f"CI_a = [{CI_a[0]:.3f}, {CI_a[1]:.3f}]", f"CI_b = [{CI_b[0]:.3f}, {CI_b[1]:.3f}]"]
+    Col_BA = Col_BA + [f"Mean difference is: {dxy:.3f}", f"Deviation is: {2*Sxy:.3f}", " ", " "]
+
 
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 
         # Notes 
@@ -356,8 +401,65 @@ for i in range(0, len(subjects)):
     #----------------------------------------------------------------------------------------------------------------------------------------
         # Save everything into an excel file
     #----------------------------------------------------------------------------------------------------------------------------------------
+    # Create an excel file
+    if Gender == 0:
+        Gender = "M"
+    else:
+        Gender = "F"
 
+    # Linear model
+    path = f"Acquisitions\\Protocol\\Processed data\\Input to model" # Location of the output file
+    Col_ID = [f"{ID}", " ", " ", " "]
+    Col_info = [f"Gender: {Gender}", f"Age: {Age}", f"Weight: {Weight}", f"Height: {Height}"]
+    Col_model = ["Linear", " ", " ", " "]
+    Col_legend = ["Low", "Medium", "High", "Average"]
+    Col_alpha = np.append(Linear_parameters, Linear_averages)
+    Col_gamma = np.zeros(4)
+    Col_delta_hr = np.zeros(4)
+    Col_delta_rpe = np.zeros(4)
+    
+    # Simple decay
+    Col_ID = Col_ID + [" ", " ", " ", " "]
+    Col_info = Col_info + [" ", " ", " ", " "]
+    Col_model = Col_model + ["Simple decay", " ", " ", " "]
+    Col_legend = Col_legend + ["Low", "Medium", "High", "Average"]
+    Col_alpha = np.append(Col_alpha, np.concatenate([Simple_decay_parameters[0, :], np.array([Simple_decay_averages[0]])]))
+    Col_gamma = np.append(Col_gamma, np.concatenate([Simple_decay_parameters[1, :], np.array([Simple_decay_averages[1]])]))
+    Col_delta_hr = np.append(Col_delta_hr, np.zeros(4))
+    Col_delta_rpe = np.append(Col_delta_rpe, np.zeros(4))
 
+    # Multiplicative adjustment
+    Col_ID = Col_ID + [" ", " ", " ", " "]
+    Col_info = Col_info + [" ", " ", " ", " "]
+    Col_model = Col_model + ["Multiplicative adjustment", " ", " ", " "]
+    Col_legend = Col_legend + ["Low", "Medium", "High", "Average"]
+    Col_alpha = np.append(Col_alpha, np.concatenate([Multiplicative_parameters[0, :], np.array([Multiplicative_averages[0]])]))
+    Col_gamma = np.append(Col_gamma, np.concatenate([Multiplicative_parameters[1, :], np.array([Multiplicative_averages[1]])]))
+    Col_delta_hr = np.append(Col_delta_hr, np.concatenate([Multiplicative_parameters[2, :], np.array([Multiplicative_averages[2]])]))
+    Col_delta_rpe = np.append(Col_delta_rpe, np.concatenate([Multiplicative_parameters[1, :], np.array([Multiplicative_averages[3]])]))
+
+    # Exponential adjustment
+    Col_ID = Col_ID + [" ", " ", " ", " "]
+    Col_info = Col_info + [" ", " ", " ", " "]
+    Col_model = Col_model + ["Exponential adjustment", " ", " ", " "]
+    Col_legend = Col_legend + ["Low", "Medium", "High", "Average"]
+    Col_alpha = np.append(Col_alpha, np.concatenate([Exponential_parameters[0, :], np.array([Exponential_averages[0]])]))
+    Col_gamma = np.append(Col_gamma, np.concatenate([Exponential_parameters[1, :], np.array([Exponential_averages[1]])]))
+    Col_delta_hr = np.append(Col_delta_hr, np.concatenate([Exponential_parameters[2, :], np.array([Exponential_averages[2]])]))
+    Col_delta_rpe = np.append(Col_delta_rpe, np.concatenate([Exponential_parameters[1, :], np.array([Exponential_averages[3]])]))
+
+    df = pd.DataFrame({'ID': Col_ID, 'P info' : Col_info, 'Model': Col_model, 'Intensity': Col_legend, 'alpha': Col_alpha, 'gamma': Col_gamma, 'delta HR': Col_delta_hr, 'delta RPE': Col_delta_rpe, 'Residuals': Col_residuals, "MSE and RMSE": Col_MSE, 'OLP line': Col_OLP, 'Bland-Altman': Col_BA})
+
+    if j == 0:
+        Excel_df = df.copy()
+    else:
+        Excel_df = pd.concat([Excel_df, df], axis = 0)
+
+# Writing a file
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\Protocol\\Processed Data"
+Excel_df.to_excel(f'{path}\\Parameters.xlsx')
+
+print("File saved succesfully!")
 
 
 

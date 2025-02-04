@@ -9,7 +9,7 @@ import Statistical_analysis
 
 # Decay model
 # subjects = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-subjects = [11]
+subjects = [9]
 
 for i in range(0, len(subjects)):
     ID = subjects[i]
@@ -19,12 +19,12 @@ for i in range(0, len(subjects)):
         ID = f"0{ID}"
 
     path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\Protocol\\Processed Data\\Input to model"
-    # data = pd.read_excel(f"{path}\\{ID}_input_file.xlsx")
-    data = pd.read_csv("Fake_data.csv")
-    HR = data.iloc[:, 0]
-    RPE = data.iloc[:, 1]
-    Power_hc = data.iloc[:, 2]
-    Power_bc = data.iloc[:, 3]
+    data = pd.read_excel(f"{path}\\{ID}_input_file.xlsx")
+    # data = pd.read_csv("Fake_data.csv")
+    HR = data.iloc[:, 2]
+    RPE = data.iloc[:, 3]
+    Power_hc = data.iloc[:, 4]
+    Power_bc = data.iloc[:, 5]
     time = np.linspace(0, 540, len(Power_hc))
     # Age = data.iloc[2, 1]
     # Weight = data.iloc[3, 1]
@@ -54,11 +54,12 @@ for i in range(0, len(subjects)):
 
     # Plot the signal
     fig, axs = plt.subplots(2, 2)
+    fig.suptitle(f"Model vs original, participant {ID}")
     axs[0, 0].plot(time, Power_bc, label="Observed bicycle power")
     axs[0, 0].plot(time, Power_hc_tweaked_linear, label="Linear model")
     axs[0, 0].set_xlabel("Time [s]")
     axs[0, 0].set_ylabel("Power [W]")
-    axs[0, 0].set_title(f"Linear Model, participant {ID}")
+    axs[0, 0].set_title(f"Linear Model,")
     axs[0, 0].legend()
     # plt.show()
 
@@ -85,7 +86,7 @@ for i in range(0, len(subjects)):
     axs[1, 0].legend()
     axs[1, 0].set_xlabel('Time [s]')
     axs[1, 0].set_ylabel('Power [W]')
-    axs[1, 0].set_title(f"Simple decay model, participant {ID}")
+    axs[1, 0].set_title(f"Simple decay model")
     # plt.show()
 
     popt_simple_decay = popt
@@ -233,7 +234,7 @@ for i in range(0, len(subjects)):
     axs[0, 1].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[0, 1].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
     axs[0, 1].legend(loc = "upper left", fontsize = "small")
-    axs[0, 1].set_title(f"Linear model, a = {a:.2f}, b = {b:.2f}")
+    axs[0, 1].set_title(f"Multiplicative decay, a = {a:.2f}, b = {b:.2f}")
     print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f},, with a Confidence Interval at 95% of {CI_a} for a and {CI_b} for b")
     print("\n")
 
@@ -260,7 +261,7 @@ for i in range(0, len(subjects)):
     axs[1, 1].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[1, 1].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
     axs[1, 1].legend(loc = "upper left", fontsize = "small")
-    axs[1, 1].set_title(f"Linear model, a = {a:.2f}, b = {b:.2f}")
+    axs[1, 1].set_title(f"Exponential model, a = {a:.2f}, b = {b:.2f}")
     print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of {CI_a} for a and {CI_b} for b")
     print("\n")
 

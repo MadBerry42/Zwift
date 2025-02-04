@@ -1,4 +1,5 @@
 import numpy as np
+<<<<<<< HEAD
 import pandas as pd
 import statistics
 import matplotlib.pyplot as plt
@@ -265,3 +266,15 @@ else:
 
 # plt.tight_layout()
 # plt.show()
+=======
+
+aerobic = [3, 4, 5]
+anaerobic = [1, 2, 4]
+
+R = np.corrcoef(aerobic, anaerobic)
+r_pearson = R[0, 1]
+
+# print(R)
+print("Pearson's coefficient is: ", r_pearson)
+
+>>>>>>> 2ae72e98d1d531da6c3fb86d1b8bd28226ed8c58
