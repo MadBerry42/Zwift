@@ -6,7 +6,7 @@ from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import pandas as pd
-import Statistical_analysis
+import Functions
 
 # Decay model
 subjects = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
@@ -242,11 +242,11 @@ for j in range(0, len(subjects)):
     print(f"The sum of residuals for the linear model is: {sum_residuals:.3f}") 
     print(f"The maximum residual is: {max(residuals):.3f}")    
 
-    MSE, RMSE = Statistical_analysis.get_MSE_and_RMSE(Power_bc, Power_hc)
+    MSE, RMSE = Functions.get_MSE_and_RMSE(Power_bc, Power_hc)
     print(f"MSE for this model is: {MSE:.3f}")
     print(f"RMSE for this model is: {RMSE:.3f}")
 
-    a, b, y_fit, CI_a, CI_b = Statistical_analysis.olp_line(Power_bc, Power_hc)
+    a, b, y_fit, CI_a, CI_b = Functions.olp_line(Power_bc, Power_hc)
     fig, axs = plt.subplots(2, 2)
     fig.suptitle(f"OLP line, participant {ID}")
     plt.tight_layout()
@@ -258,7 +258,7 @@ for j in range(0, len(subjects)):
     print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
-    dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
+    dxy, Sxy, lim_sup, lim_inf = Functions.get_Bland_Altman_plot(Power_bc, Power_hc)
     fig2, axs2 = plt.subplots(2, 2)
     fig2.suptitle(f"Bland-Altman Plot, participant {ID}")
     axs2[0, 0].plot((Power_bc + Power_hc)/2, (Power_bc - Power_hc)/2, '*')
@@ -282,11 +282,11 @@ for j in range(0, len(subjects)):
     print(f"The sum of residuals for the simple decay model is: {sum_residuals:.3f}") 
     print(f"The maximum residual is: {max(residuals):.3f}")    
 
-    MSE, RMSE = Statistical_analysis.get_MSE_and_RMSE(Power_bc, Power_hc)
+    MSE, RMSE = Functions.get_MSE_and_RMSE(Power_bc, Power_hc)
     print(f"MSE for this model is: {MSE:.3f}")
     print(f"RMSE for this model is: {RMSE:.3f}")
 
-    a, b, y_fit, CI_a, CI_b = Statistical_analysis.olp_line(Power_bc, Power_hc)
+    a, b, y_fit, CI_a, CI_b = Functions.olp_line(Power_bc, Power_hc)
     axs[1, 0].scatter(Power_bc, Power_hc, c = 'orange', label = "Data")
     axs[1, 0].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[1, 0].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
@@ -295,7 +295,7 @@ for j in range(0, len(subjects)):
     print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
-    dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
+    dxy, Sxy, lim_sup, lim_inf = Functions.get_Bland_Altman_plot(Power_bc, Power_hc)
     axs2[1, 0].plot((Power_bc + Power_hc)/2, (Power_bc - Power_hc)/2, '*')
     axs2[1, 0].axhline(y = dxy, color = "b")
     axs2[1, 0].axhline(y = lim_sup, linestyle = "-.")
@@ -316,11 +316,11 @@ for j in range(0, len(subjects)):
     print(f"The sum of residuals for the multiplicative decay model is: {sum_residuals:.3f}") 
     print(f"The maximum residual is: {max(residuals):.3f}")    
 
-    MSE, RMSE = Statistical_analysis.get_MSE_and_RMSE(Power_bc, Power_hc)
+    MSE, RMSE = Functions.get_MSE_and_RMSE(Power_bc, Power_hc)
     print(f"MSE for this model is: {MSE:.3f}")
     print(f"RMSE for this model is: {RMSE:.3f}")
 
-    a, b, y_fit, CI_a, CI_b = Statistical_analysis.olp_line(Power_bc, Power_hc)
+    a, b, y_fit, CI_a, CI_b = Functions.olp_line(Power_bc, Power_hc)
     axs[0, 1].scatter(Power_bc, Power_hc, c = 'orange', label = "Data")
     axs[0, 1].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[0, 1].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
@@ -329,7 +329,7 @@ for j in range(0, len(subjects)):
     print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
-    dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
+    dxy, Sxy, lim_sup, lim_inf = Functions.get_Bland_Altman_plot(Power_bc, Power_hc)
     axs2[0, 1].plot((Power_bc + Power_hc)/2, (Power_bc - Power_hc)/2, '*')
     axs2[0, 1].axhline(y = dxy, color = "b")
     axs2[0, 1].axhline(y = lim_sup, linestyle = "-.")
@@ -350,11 +350,11 @@ for j in range(0, len(subjects)):
     print(f"The sum of residuals for the exponential decay model is: {sum_residuals:.3f}") 
     print(f"The maximum residual is: {max(residuals):.3f}")    
 
-    MSE, RMSE = Statistical_analysis.get_MSE_and_RMSE(Power_bc, Power_hc)
+    MSE, RMSE = Functions.get_MSE_and_RMSE(Power_bc, Power_hc)
     print(f"MSE for this model is: {MSE:.3f}")
     print(f"RMSE for this model is: {RMSE:.3f}")
 
-    a, b, y_fit, CI_a, CI_b = Statistical_analysis.olp_line(Power_bc, Power_hc)
+    a, b, y_fit, CI_a, CI_b = Functions.olp_line(Power_bc, Power_hc)
     axs[1, 1].scatter(Power_bc, Power_hc, c = 'orange', label = "Data")
     axs[1, 1].plot(Power_bc, Power_bc, c = 'green', label = "Bisecant")
     axs[1, 1].plot(Power_bc, y_fit, c = "red", label = "Interpolating line")
@@ -363,7 +363,7 @@ for j in range(0, len(subjects)):
     print(f"The parameter of the OLP line are a = {a:.3f}, b = {b:.3f}, with a Confidence Interval at 95% of [{CI_a[0]:.3f}, {CI_a[1]:.3f}] for a and [{CI_b[0]:.3f}, {CI_b[1]:.3f}] for b")
     print("\n")
 
-    dxy, Sxy, lim_sup, lim_inf = Statistical_analysis.get_Bland_Altman_plot(Power_bc, Power_hc)
+    dxy, Sxy, lim_sup, lim_inf = Functions.get_Bland_Altman_plot(Power_bc, Power_hc)
     axs2[1, 1].plot((Power_bc + Power_hc)/2, (Power_bc - Power_hc)/2, '*')
     axs2[1, 1].axhline(y = dxy, color = "b")
     axs2[1, 1].axhline(y = lim_sup, linestyle = "-.")
