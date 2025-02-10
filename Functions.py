@@ -8,27 +8,28 @@ import matplotlib.pyplot as plt
 from scipy.stats import f
 import math
 import pandas as pd 
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 
 #----------------------------------------------------------------------------------------------------------------------------------------
     # Linear model
 #----------------------------------------------------------------------------------------------------------------------------------------
 class DataSet():
 
-    def __init__(self, path:str, ID:str):
+    def __init__(self, file:str):
         
-        data = pd.read_excel(f"{path}\\{ID}_input_file.xlsx")
+        data = pd.read_excel(f"{file}")
         # data = pd.read_csv("Fake_data.csv")
         self.HR = data.iloc[:, 2]
         self.RPE = data.iloc[:, 3]
-        self.Power_hc = data.iloc[:, 4].to_numpy()
-        self.Power_bc = data.iloc[:, 5].to_numpy()
-        self.time = np.linspace(0, 540, len(self.Power_hc))
+        self.cadence = data.iloc[:, 4]
+        self.Power_hc = data.iloc[:, 5].to_numpy()
+        self.Power_bc = data.iloc[:, 6].to_numpy()
+        self.time = np.linspace(300, 1379, len(self.Power_hc))
 
-        self.Gender = data.iloc[1, 1]
-        self.Age = data.iloc[2, 1]
-        self.Weight = data.iloc[3, 1]
-        self.Height = data.iloc[4, 1]/100
+        self.Gender = int(data.iloc[1, 1])
+        self.Age = int(data.iloc[2, 1])
+        self.Weight = int(data.iloc[3, 1])
+        self.Height = int(data.iloc[4, 1])/100
         
 
 class LinearModel():
@@ -75,9 +76,15 @@ class LinearModel():
 
 class SimpleDecay():
 
-    def __init__(self, fig, axs):
+    def __init__(self): # , fig, axs): 
+        '''self.fig = fig
+        self.axs = axs'''
+        pass
+
+    '''If you wish to see the plot, 
+        def __init__(self): # , fig, axs): 
         self.fig = fig
-        self.axs = axs
+        self.axs = axs'''
 
     def fit(self, D:DataSet):
         self.predict
@@ -148,9 +155,15 @@ class SimpleDecay():
 
 class MultiplicativeDecay():
 
-    def __init__(self, fig, axs):
+    def __init__(self): # , fig, axs): 
+        '''self.fig = fig
+        self.axs = axs'''
+        pass
+
+    '''If you wish to see the plot, 
+        def __init__(self): # , fig, axs): 
         self.fig = fig
-        self.axs = axs
+        self.axs = axs'''
 
     def fit(self, D:DataSet):
         self.predict
@@ -222,14 +235,21 @@ class MultiplicativeDecay():
 
 
 #-------------------------------------------------------------------------------------------------------------------------------
-    # Exponential decay Model
+    # Complete decay Model
 #-------------------------------------------------------------------------------------------------------------------------------
 
-class ExponentialDecay():
+class CompleteDecay():
 
-    def __init__(self, fig, axs):
-        self.fig = fig
-        self.axs = axs
+    def __init__(self, D):
+        self.Height = D.Height
+        self.Weight = D.Weight
+        self.Age = D.Age
+    
+        '''If you wish to see the plot, after
+            def __init__(self): # , fig, axs, D): 
+            add
+            self.fig = fig
+            self.axs = axs'''
 
     def fit(self, D:DataSet):
         self.predict
@@ -238,6 +258,9 @@ class ExponentialDecay():
         gamma_array = np.zeros(3)
         delta_hr_array = np.zeros(3)
         delta_rpe_array = np.zeros(3)
+        delta_height_array = np.zeros(3)
+        delta_weight_array = np.zeros(3)
+        delta_age_array = np.zeros(3)
 
         for i in range(3):
             t = D.time[i * 180 : (i+1) * 180]
@@ -247,8 +270,8 @@ class ExponentialDecay():
             x[2, :] = D.HR[i * 180 : (i+1) * 180]
             x[3, :] = D.RPE[i * 180 : (i+1) * 180]
 
-            self.popt, pcov = curve_fit(self.model, x,  D.Power_bc[i * 180 : (i+1) * 180], p0=[00.1, 0.001, 0.0001, 0.0001], maxfev = 10000) 
-            alpha_array[i], gamma_array[i], delta_hr_array[i], delta_rpe_array[i] = self.popt
+            self.popt, pcov = curve_fit(self.model, x,  D.Power_bc[i * 180 : (i+1) * 180], p0=[00.1, 0.001, 0.0001, 0.0001, 0.1, 0.1, 0.1], maxfev = 10000) 
+            alpha_array[i], gamma_array[i], delta_hr_array[i], delta_rpe_array[i], delta_weight_array[i], delta_height_array[i], delta_age_array[i] = self.popt
 
             Bc = self.predict(x, *self.popt)
 
@@ -261,30 +284,37 @@ class ExponentialDecay():
         self.gamma_array = gamma_array
         self.delta_hr_array = delta_hr_array
         self.delta_rpe_array = delta_rpe_array
+        self.delta_height_array = delta_height_array
+        self.delta_weight_array = delta_weight_array
+        self.delta_age_array = delta_age_array
+
         self.alpha = np.mean(alpha_array)
         self.gamma = np.mean(gamma_array)
         self.delta_rpe = np.mean(delta_rpe_array)
         self.delta_hr = np.mean(delta_hr_array)
+        self.delta_height = np.mean(delta_height_array)
+        self.delta_weight = np.mean(delta_weight_array)
+        self.delta_age = np.mean(delta_age_array)
     
         return Model_hc
 
 
-    def model(self, x, alpha, gamma, delta_hr, delta_rpe):
+    def model(self, x, alpha, gamma, delta_hr, delta_rpe, delta_height, delta_weight, delta_age):
 
         t = x[0, :]
         Power_hc = x[1, :]
         HR = x[2, :]
         RPE = x[3, :]
 
-        m = alpha * Power_hc * np.exp(-(gamma + delta_hr * HR+ delta_rpe * RPE) * t)
+        m = alpha * Power_hc * (1 + gamma * t) + (1 + delta_hr * HR) + (1 + delta_rpe * RPE) + (1 + delta_weight *self.Weight) + (1 + delta_height * self.Height) + (1 + delta_age * self.Age) 
 
         return m
     
 
 
-    def predict(self, x, alpha, gamma, delta_hr, delta_rpe):
+    def predict(self, x, alpha, gamma, delta_hr, delta_rpe, delta_height, delta_weight, delta_age):
 
-        m = self.model(x, alpha, gamma, delta_hr, delta_rpe)
+        m = self.model(x, alpha, gamma, delta_hr, delta_rpe, delta_height, delta_weight, delta_age)
 
         return m
     
@@ -296,8 +326,62 @@ class ExponentialDecay():
         self.axs[1, 1].plot(time, Model, label="Model")
         self.axs[1, 1].set_xlabel("Time [s]")
         self.axs[1, 1].set_ylabel("Power [W]")
-        self.axs[1, 1].set_title(f"Exponential decay Model")
+        self.axs[1, 1].set_title(f"Complete multiplicative adjustment Model")
         self.axs[1, 1].legend()
+
+
+
+class LinearRegression():
+    def __init__(self):
+        pass
+
+    def create_matrices(self, dataset):
+        height = np.ones(len(dataset.Power_bc)) * dataset.Height
+        weight = np.ones(len(dataset.Power_bc)) * dataset.Weight
+        age = np.ones(len(dataset.Power_bc)) * dataset.Age
+        # With RPE
+        # self.A = np.array([dataset.Power_hc, dataset.HR, dataset.RPE, dataset.cadence, height, weight, age]).T
+        # Without RPE
+        self.A = np.array([dataset.Power_hc, dataset.HR, dataset.cadence, height, weight, age]).T
+        self.b = dataset.Power_bc
+
+        self.xdag = np.linalg.pinv(self.A)@self.b
+        self.lam = np.array([0, 0.1, 0.5]) # Different possible values of lambda 1 (l1 penalty)
+        # If l1 = 0, the solution is equivalent to xdag 
+        return self.A, self.b, self.lam
+
+
+    def regression(self):
+        A = self.A
+        b = self.b
+        lam = self.lam
+        xdag = self.xdag
+
+        def reg_norm(x, A, b, lam):
+            return np.linalg.norm(A@x - b, ord = 2) + lam * np.linalg.norm(x, ord = 1)
+        
+        X = np.zeros((len(lam), A.shape[1]))
+        for j in range(len(lam)):
+            res = minimize(reg_norm, args = (A, b, lam[j]), x0 = xdag)
+            X[j, :] = np.array(res.x)
+
+        return X
+    
+    def plot_regression(self, A, X):
+        lam = self.lam
+        t = np.linspace(300, 840, len(self.b))
+        fig, axs = plt.subplots(len(lam))
+        fig.suptitle("Linear regression")
+        for j in range(len(lam)):
+            x = X[j, :]
+            axs[j].plot(t, A@x, label = "Model")
+            axs[j].plot(t, self.b, label = "Original signal")
+            axs[j].set_title(f"Lambda = {lam[j]}")
+            
+    
+
+
+
 
 
 class StatisticalAnalysis():
@@ -366,30 +450,61 @@ class StatisticalAnalysis():
 
 
 
-        
 
 
+#-------------------------------------------------------------------------------------------------------------------------------
+    # Validation
+#-------------------------------------------------------------------------------------------------------------------------------
+class ValidateModel():
+    def __init__(self, dataset):
+        self.Power_hc = dataset.Power_hc
+        self.Power_bc = dataset.Power_bc
+        self.HR = dataset.HR
+        self.RPE = dataset.RPE
+        self.t = dataset.time
+        self.Height = dataset.Height
+        self.Weight = dataset.Weight
+        self.Age = dataset.Age
+        self.cadence = dataset.cadence
 
+        pass
 
+    def implement_model(self, model, X, lam, fig, axs):
+        if model == "linear":
+            Tweaked_signal = self.Power_hc * 2.8442
+            axs[0, 0].plot(self.t, Tweaked_signal, label = "Linear model")
+            axs[0, 0].plot(self.t, self.Power_bc, label = " Bicycle signal")
+            axs[0, 0].plot(self.t, self.Power_hc, label = " Original signal")
+            axs[0, 0].legend()
+        if model == "simple decay": 
+            Tweaked_signal = self.Power_hc * 3.0577 * (1 + 0.00097 * self.t)
+            axs[0, 1].plot(self.t, Tweaked_signal, label = "Simple decay model")
+            axs[0, 1].plot(self.t, self.Power_bc, label = " Bicycle signal")
+            axs[0, 1].plot(self.t, self.Power_hc, label = " Original signal")
+            axs[0, 1].legend()
+        if model == "multiplicative decay":
+            Tweaked_signal = 0.689 * self.Power_hc * (1 + 0.00011 * self.t) * (1 + 0.0077* self.HR) * (1 + 0.3978 * self.RPE)
+            axs[1, 0].plot(self.t, Tweaked_signal, label = "Multiplicative decay model")
+            axs[1, 0].plot(self.t, self.Power_bc, label = " Bicycle signal")
+            axs[1, 0].plot(self.t, self.Power_hc, label = " Original signal")
+            axs[1, 0].legend()
+        if model == "complete decay":
+            Tweaked_signal = 1.761 * self.Power_hc + (1 + 1.7194 * self.t) + (1 - 0.225 * self.HR) + (1+ 22.90326 * self.RPE) + (1 - 0.42684 * self.Height) + (1 - 0.42864 * self.Weight) + (1 - 7.42725 * self.Age)
+            axs[1, 1].plot(self.t, Tweaked_signal, label = "Complete variables decay model")
+            axs[1, 1].plot(self.t, self.Power_bc, label = " Bicycle signal")
+            axs[1, 1].plot(self.t, self.Power_hc, label = " Original signal")
+            axs[1, 1].legend()
+        if model == "linear regression":
+            plt.figure()
+            coeff = X[lam, :]
+            # with RPE
+            # Tweaked_signal = 8.39667443e-01 * self.Power_hc + 1.19691252e-01 * self.HR + 9.78136690 * self.RPE + 3.54213310e-01 * self.cadence - 2.55727294e-02 * self.Height - 1.04634556 * self.Weight - 3.54403299e-01 * self.Age
+            # without RPE
+            Tweaked_signal = coeff[0] * self.Power_hc + coeff[1] * self.HR + coeff[2] * self.cadence + coeff[3] * self.Height + coeff[4] * self.Weight + coeff[5] * self.Age
+            plt.plot(self.t, Tweaked_signal, label = "Linear regression model")
+            plt.plot(self.t, self.Power_bc, label = " Bicycle signal")
+            plt.plot(self.t, self.Power_hc, label = " Original signal")
+            plt.legend()            
 
-#-----------------------------------------------------------------------------------------------------------------------------------
-    # Statistical analysis
-#-----------------------------------------------------------------------------------------------------------------------------------
-
-
-def get_Bland_Altman_plot(gold_standard, validated):
-    Sxy = np.std(gold_standard - validated)
-    dxy = np.mean(gold_standard - validated)
-    lim_sup = dxy + 2 * Sxy
-    lim_inf = dxy - 2 * Sxy
-
-    # Uncomment if you wish to see the plot
-    '''plt.figure()
-    plt.plot((gold_standard + validated)/2, (gold_standard - validated)/2, '*')
-    plt.axhline(y = dxy, color = "b")
-    plt.axhline(y = lim_sup, linestyle = "-.")
-    plt.axhline(y = lim_inf, linestyle = "-.")
-    plt.set_title("Bland-Altman Plot")'''
-
-    return Sxy, dxy, lim_sup, lim_inf
+        return Tweaked_signal
 
