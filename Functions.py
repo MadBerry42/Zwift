@@ -148,205 +148,23 @@ class SimpleDecay():
         self.axs[0, 1].legend()
 
 
-
-#-------------------------------------------------------------------------------------------------------------------------------
-    # Multiplicative adjustment to decay Model
-#-------------------------------------------------------------------------------------------------------------------------------
-
-class MultiplicativeDecay():
-
-    def __init__(self): # , fig, axs): 
-        '''self.fig = fig
-        self.axs = axs'''
-        pass
-
-    '''If you wish to see the plot, 
-        def __init__(self): # , fig, axs): 
-        self.fig = fig
-        self.axs = axs'''
-
-    def fit(self, D:DataSet):
-        self.predict
-
-        alpha_array = np.zeros(3)
-        gamma_array = np.zeros(3)
-        delta_hr_array = np.zeros(3)
-        delta_rpe_array = np.zeros(3)
-
-        for i in range(3):
-            t = D.time[i * 180 : (i+1) * 180]
-            x = np.zeros((4, 180))
-            x[0, :] = D.time[i * 180 : (i+1) * 180]
-            x[1, :] = D.Power_hc[i * 180 : (i+1) * 180]
-            x[2, :] = D.HR[i * 180 : (i+1) * 180]
-            x[3, :] = D.RPE[i * 180 : (i+1) * 180]
-
-            self.popt, pcov = curve_fit(self.model, x,  D.Power_bc[i * 180 : (i+1) * 180], p0=[0.1, 0.001, 0.001, 0.001], maxfev = 10000) 
-            alpha_array[i], gamma_array[i], delta_hr_array[i], delta_rpe_array[i] = self.popt
-
-            Bc = self.predict(x, *self.popt)
-
-            if i == 0:
-                Model_hc = Bc
-            else:
-                Model_hc = np.concatenate((Model_hc, Bc))
-
-        self.alpha_array = alpha_array
-        self.gamma_array = gamma_array
-        self.delta_hr_array = delta_hr_array
-        self.delta_rpe_array = delta_rpe_array
-        self.alpha = np.mean(alpha_array)
-        self.gamma = np.mean(gamma_array)
-        self.delta_rpe = np.mean(delta_rpe_array)
-        self.delta_hr = np.mean(delta_hr_array)
-    
-        return Model_hc
-
-
-    def model(self, x, alpha, gamma, delta_hr, delta_rpe):
-
-        t = x[0, :]
-        Power_hc = x[1, :]
-        HR = x[2, :]
-        RPE = x[3, :]
-
-        m = alpha * Power_hc * (1 - gamma * t) * (1 + delta_hr * HR) * (1 + delta_rpe * RPE)
-
-        return m
-    
-
-
-    def predict(self, x, alpha, gamma, delta_hr, delta_rpe):
-
-        m = self.model(x, alpha, gamma, delta_hr, delta_rpe)
-
-        return m
-    
-
-    def plot(self, ID, time, Power_bc, Model):
-
-        self.fig.suptitle(f"Models vs bicycle, participant {ID}")
-        self.axs[1, 0].plot(time, Power_bc, label="Observed bicycle power")
-        self.axs[1, 0].plot(time, Model, label="Model")
-        self.axs[1, 0].set_xlabel("Time [s]")
-        self.axs[1, 0].set_ylabel("Power [W]")
-        self.axs[1, 0].set_title(f"Multiplicative adjustment Model")
-        self.axs[1, 0].legend()
-
-
-#-------------------------------------------------------------------------------------------------------------------------------
-    # Complete decay Model
-#-------------------------------------------------------------------------------------------------------------------------------
-
-class CompleteDecay():
-
-    def __init__(self, D):
-        self.Height = D.Height
-        self.Weight = D.Weight
-        self.Age = D.Age
-    
-        '''If you wish to see the plot, after
-            def __init__(self): # , fig, axs, D): 
-            add
-            self.fig = fig
-            self.axs = axs'''
-
-    def fit(self, D:DataSet):
-        self.predict
-
-        alpha_array = np.zeros(3)
-        gamma_array = np.zeros(3)
-        delta_hr_array = np.zeros(3)
-        delta_rpe_array = np.zeros(3)
-        delta_height_array = np.zeros(3)
-        delta_weight_array = np.zeros(3)
-        delta_age_array = np.zeros(3)
-
-        for i in range(3):
-            t = D.time[i * 180 : (i+1) * 180]
-            x = np.zeros((4, 180))
-            x[0, :] = D.time[i * 180 : (i+1) * 180]
-            x[1, :] = D.Power_hc[i * 180 : (i+1) * 180]
-            x[2, :] = D.HR[i * 180 : (i+1) * 180]
-            x[3, :] = D.RPE[i * 180 : (i+1) * 180]
-
-            self.popt, pcov = curve_fit(self.model, x,  D.Power_bc[i * 180 : (i+1) * 180], p0=[00.1, 0.001, 0.0001, 0.0001, 0.1, 0.1, 0.1], maxfev = 10000) 
-            alpha_array[i], gamma_array[i], delta_hr_array[i], delta_rpe_array[i], delta_weight_array[i], delta_height_array[i], delta_age_array[i] = self.popt
-
-            Bc = self.predict(x, *self.popt)
-
-            if i == 0:
-                Model_hc = Bc
-            else:
-                Model_hc = np.concatenate((Model_hc, Bc))
-
-        self.alpha_array = alpha_array
-        self.gamma_array = gamma_array
-        self.delta_hr_array = delta_hr_array
-        self.delta_rpe_array = delta_rpe_array
-        self.delta_height_array = delta_height_array
-        self.delta_weight_array = delta_weight_array
-        self.delta_age_array = delta_age_array
-
-        self.alpha = np.mean(alpha_array)
-        self.gamma = np.mean(gamma_array)
-        self.delta_rpe = np.mean(delta_rpe_array)
-        self.delta_hr = np.mean(delta_hr_array)
-        self.delta_height = np.mean(delta_height_array)
-        self.delta_weight = np.mean(delta_weight_array)
-        self.delta_age = np.mean(delta_age_array)
-    
-        return Model_hc
-
-
-    def model(self, x, alpha, gamma, delta_hr, delta_rpe, delta_height, delta_weight, delta_age):
-
-        t = x[0, :]
-        Power_hc = x[1, :]
-        HR = x[2, :]
-        RPE = x[3, :]
-
-        m = alpha * Power_hc * (1 + gamma * t) + (1 + delta_hr * HR) + (1 + delta_rpe * RPE) + (1 + delta_weight *self.Weight) + (1 + delta_height * self.Height) + (1 + delta_age * self.Age) 
-
-        return m
-    
-
-
-    def predict(self, x, alpha, gamma, delta_hr, delta_rpe, delta_height, delta_weight, delta_age):
-
-        m = self.model(x, alpha, gamma, delta_hr, delta_rpe, delta_height, delta_weight, delta_age)
-
-        return m
-    
-
-    def plot(self, ID, time, Power_bc, Model):
-
-        self.fig.suptitle(f"Models vs bicycle, participant {ID}")
-        self.axs[1, 1].plot(time, Power_bc, label="Observed bicycle power")
-        self.axs[1, 1].plot(time, Model, label="Model")
-        self.axs[1, 1].set_xlabel("Time [s]")
-        self.axs[1, 1].set_ylabel("Power [W]")
-        self.axs[1, 1].set_title(f"Complete multiplicative adjustment Model")
-        self.axs[1, 1].legend()
-
-
-
 class LinearRegression():
     def __init__(self):
         pass
 
-    def create_matrices(self, dataset):
+    def create_matrices(self, dataset, mode:str):
         height = np.ones(len(dataset.Power_bc)) * dataset.Height
         weight = np.ones(len(dataset.Power_bc)) * dataset.Weight
         age = np.ones(len(dataset.Power_bc)) * dataset.Age
-        # With RPE
-        # self.A = np.array([dataset.Power_hc, dataset.HR, dataset.RPE, dataset.cadence, height, weight, age]).T
-        # Without RPE
-        self.A = np.array([dataset.Power_hc, dataset.HR, dataset.cadence, height, weight, age]).T
+        if mode == "true": # RPE is included
+            self.A = np.array([dataset.Power_hc, dataset.HR, dataset.RPE, dataset.cadence, height, weight, age]).T
+        elif mode == "false": # NO RPE
+            self.A = np.array([dataset.Power_hc, dataset.HR, dataset.cadence, height, weight, age]).T
+        
         self.b = dataset.Power_bc
 
         self.xdag = np.linalg.pinv(self.A)@self.b
-        self.lam = np.array([0, 0.1, 0.5]) # Different possible values of lambda 1 (l1 penalty)
+        self.lam = np.array([0, 0.1, 10]) # Different possible values of lambda 1 (l1 penalty)
         # If l1 = 0, the solution is equivalent to xdag 
         return self.A, self.b, self.lam
 
@@ -469,41 +287,29 @@ class ValidateModel():
 
         pass
 
-    def implement_model(self, model, X, lam, fig, axs):
+    def implement_model(self, model:str, X, index, fig, axs, mode:str):
         if model == "linear":
             Tweaked_signal = self.Power_hc * 2.8442
-            axs[0, 0].plot(self.t, Tweaked_signal, label = "Linear model")
-            axs[0, 0].plot(self.t, self.Power_bc, label = " Bicycle signal")
-            axs[0, 0].plot(self.t, self.Power_hc, label = " Original signal")
-            axs[0, 0].legend()
-        if model == "simple decay": 
-            Tweaked_signal = self.Power_hc * 3.0577 * (1 + 0.00097 * self.t)
-            axs[0, 1].plot(self.t, Tweaked_signal, label = "Simple decay model")
-            axs[0, 1].plot(self.t, self.Power_bc, label = " Bicycle signal")
-            axs[0, 1].plot(self.t, self.Power_hc, label = " Original signal")
-            axs[0, 1].legend()
-        if model == "multiplicative decay":
-            Tweaked_signal = 0.689 * self.Power_hc * (1 + 0.00011 * self.t) * (1 + 0.0077* self.HR) * (1 + 0.3978 * self.RPE)
-            axs[1, 0].plot(self.t, Tweaked_signal, label = "Multiplicative decay model")
-            axs[1, 0].plot(self.t, self.Power_bc, label = " Bicycle signal")
-            axs[1, 0].plot(self.t, self.Power_hc, label = " Original signal")
-            axs[1, 0].legend()
-        if model == "complete decay":
-            Tweaked_signal = 1.761 * self.Power_hc + (1 + 1.7194 * self.t) + (1 - 0.225 * self.HR) + (1+ 22.90326 * self.RPE) + (1 - 0.42684 * self.Height) + (1 - 0.42864 * self.Weight) + (1 - 7.42725 * self.Age)
-            axs[1, 1].plot(self.t, Tweaked_signal, label = "Complete variables decay model")
-            axs[1, 1].plot(self.t, self.Power_bc, label = " Bicycle signal")
-            axs[1, 1].plot(self.t, self.Power_hc, label = " Original signal")
-            axs[1, 1].legend()
+            axs[0].plot(self.t, Tweaked_signal, label = "Linear model")
+            axs[0].plot(self.t, self.Power_bc, label = " Bicycle signal")
+            axs[0].plot(self.t, self.Power_hc, label = " Original signal")
+            fig.supylabel("Power [W]")
+            axs[0].legend()
+            axs
+
         if model == "linear regression":
-            plt.figure()
-            coeff = X[lam, :]
-            # with RPE
-            # Tweaked_signal = 8.39667443e-01 * self.Power_hc + 1.19691252e-01 * self.HR + 9.78136690 * self.RPE + 3.54213310e-01 * self.cadence - 2.55727294e-02 * self.Height - 1.04634556 * self.Weight - 3.54403299e-01 * self.Age
-            # without RPE
-            Tweaked_signal = coeff[0] * self.Power_hc + coeff[1] * self.HR + coeff[2] * self.cadence + coeff[3] * self.Height + coeff[4] * self.Weight + coeff[5] * self.Age
-            plt.plot(self.t, Tweaked_signal, label = "Linear regression model")
-            plt.plot(self.t, self.Power_bc, label = " Bicycle signal")
-            plt.plot(self.t, self.Power_hc, label = " Original signal")
+
+            coeff = X[index]
+            if mode == "true": # with RPE
+                Tweaked_signal = coeff[0] * self.Power_hc + coeff[1] * self.HR + coeff[2] * self.RPE + coeff[3] * self.cadence + coeff[4] * self.Height + coeff[5] * self.Weight + coeff[6] * self.Age
+            elif mode == "false": # without RPE
+                Tweaked_signal = coeff[0] * self.Power_hc + coeff[1] * self.HR + coeff[2] * self.cadence + coeff[3] * self.Height + coeff[4] * self.Weight + coeff[5] * self.Age
+            
+            axs[1].plot(self.t, Tweaked_signal, label = "Linear regression")
+            axs[1].plot(self.t, self.Power_bc, label = " Bicycle signal")
+            axs[1].plot(self.t, self.Power_hc, label = " Original signal")
+            axs[1].set_xlabel("Time [s]")
+            axs[1].legend()
             plt.legend()            
 
         return Tweaked_signal
