@@ -18,8 +18,8 @@ ID = input("What is participant's ID?")
 ID = int(ID)
 Gender = input(f"What is participant {ID}'s gender? (0 = male, 1 = female)")
 Age = input(f"What is participant {ID}'s age?")
-Weight = input(f"What is participant {ID}'s weight?")
 Height = input(f"What is participant {ID}'s height?")
+Weight = input(f"What is participant {ID}'s weight?")
 max_HR = input(f"What is participant {ID}'s max HR?")
 
 
@@ -36,8 +36,8 @@ window_size = 15
 #-----------------------------------------------------------------------------------------------------------------------------------------
 setup = "handcycle"
 data = pd.read_csv(f"C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\Originals\\{ID}_{setup}_protocol.csv")
-beginning = 300 # 300 for the first part of the workout, 840 for the second part
-final = 1380 # 840 for the first part, 1380 for the second part
+beginning = 301 # 300 for the first part of the workout, 840 for the second part
+final = 1381 # 840 for the first part, 1380 for the second part
 data = data[beginning : final]
 power_hc = np.array(data["Power"])
 HR = np.array(data["Heart Rate"])
@@ -63,7 +63,7 @@ plt.title(f"Subject {ID}, {setup}")
 plt.legend("Original signal", "Filtered signal")
 
 # Feature extraction
-features_hr = Extract_HR_Features.get_features_from_hr_signal(HR)
+features_hr = Extract_HR_Features.get_features_from_hr_signal(HR, 'hr')
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------
