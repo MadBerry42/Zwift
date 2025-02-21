@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 #-------------------------------------------------------------------------------------------------
     # Import data
 #-------------------------------------------------------------------------------------------------
-participants = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+participants = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
 path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models"
 
@@ -35,7 +35,8 @@ for j in range(1, 6 + 1):
         # Time-dependent data
         HR = data.iloc[(j - 1) * window_length * n_windows : j * window_length * n_windows, 2] # Isolate one single block
         # HR = data.iloc[:, [2]]
-        RPE_value = int(data.iloc[(j - 1) * window_length, 3])
+        # RPE_value = int(data.iloc[(j - 1) * window_length, 3])
+        RPE_value = np.mean(data.iloc[(j - 1) * window_length * n_windows : j * window_length * n_windows, 3])
         RPE = pd.DataFrame({'RPE': [RPE_value]})
         cadence = data.iloc[(j - 1) * window_length * n_windows : j * window_length * n_windows, 4]
         Power_hc = data.iloc[(j - 1) * window_length * n_windows : j * window_length * n_windows, 5]
