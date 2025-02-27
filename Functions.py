@@ -9,6 +9,10 @@ from scipy.stats import f
 import math
 import pandas as pd 
 from scipy.optimize import curve_fit, minimize
+# RPE model
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import r2_score
+from matplotlib.lines import Line2D
 
 #----------------------------------------------------------------------------------------------------------------------------------------
     # Linear model
@@ -149,39 +153,42 @@ class SimpleDecay():
 
 
 class LinearRegression():
-    def __init__(self):
-        pass
+    def __init__(self, lam):
+        self.lam = lam  # Different possible values of lambda 1 (l1 penalty)
+        # If l1 = 0, the solution is equivalent to xdag 
 
-    def create_matrices(self, dataset, mode:str):
-        height = np.ones(len(dataset.Power_bc)) * dataset.Height
-        weight = np.ones(len(dataset.Power_bc)) * dataset.Weight
-        age = np.ones(len(dataset.Power_bc)) * dataset.Age
+    def create_matrices(self, dataset, obj_function, mode:str):
         if mode == "true": # RPE is included
+            height = np.ones(len(obj_function)) * dataset.Height
+            weight = np.ones(len(obj_function)) * dataset.Weight
+            age = np.ones(len(obj_function)) * dataset.Age
             self.A = np.array([dataset.Power_hc, dataset.HR, dataset.RPE, dataset.cadence, height, weight, age]).T
-        elif mode == "false": # NO RPE
-            self.A = np.array([dataset.Power_hc, dataset.HR, dataset.cadence, height, weight, age]).T
+        elif mode == "false": # RPE is not included
+            self.A = np.array(dataset)
         
-        self.b = dataset.Power_bc
+        self.b = obj_function
 
         self.xdag = np.linalg.pinv(self.A)@self.b
-        self.lam = np.array([0, 0.1, 10]) # Different possible values of lambda 1 (l1 penalty)
-        # If l1 = 0, the solution is equivalent to xdag 
-        return self.A, self.b, self.lam
+        return self.A, self.b
 
 
     def regression(self):
         A = self.A
         b = self.b
+        b = np.array(b).flatten()
         lam = self.lam
         xdag = self.xdag
 
         def reg_norm(x, A, b, lam):
-            return np.linalg.norm(A@x - b, ord = 2) + lam * np.linalg.norm(x, ord = 1)
+            return np.linalg.norm(A@x - b, ord = 2) + lam * (np.linalg.norm(x, ord = 1) + np.linalg.norm(x, ord=2))
         
-        X = np.zeros((len(lam), A.shape[1]))
-        for j in range(len(lam)):
-            res = minimize(reg_norm, args = (A, b, lam[j]), x0 = xdag)
-            X[j, :] = np.array(res.x)
+        X = np.zeros((1, A.shape[1]))
+        xdag = np.array(xdag)
+        xdag = xdag.ravel()
+        X = np.linalg.lstsq(A, b)
+        X = X[0]
+        # res = minimize(reg_norm, args = (A, b, lam), x0 = xdag, method='L-BFGS-B')
+        # X = np.array(res.x)
 
         return X
     
@@ -313,4 +320,148 @@ class ValidateModel():
             plt.legend()            
 
         return Tweaked_signal
+
+
+class RPEModel():
+    def __init__(self, n_windows:int, participants):
+        self.n_windows = n_windows
+        self.len_window = 180/n_windows
+        self.participants = participants
+
+    def preprocessing(self, data_or):
+        data = data_or.drop(columns = ["ID", "RPE"])
+        self.scaler = MinMaxScaler()
+        data = pd.DataFrame(self.scaler.fit_transform(data), columns = data.columns)
+        self.scaler_rpe = MinMaxScaler()
+        RPE_or = pd.DataFrame(self.scaler_rpe.fit_transform(data_or.iloc[:, [5]]))
+        
+        return data, RPE_or
+
+    def leave_p_out(self, data, RPE_or):
+        linear_regression = LinearRegression(lam=1e10)
+        n_windows = self.n_windows
+        participants = self.participants
+
+        coeff = np.zeros((len(participants) * n_windows, data.shape[1]))
+        RPE_predicted = np.zeros((len(participants), n_windows * 6))
+        RPE_measured = np.zeros((len(participants), 6 * n_windows))
+
+        for i in range(len(participants)):
+        # Create the test participant for cross validation
+            test = np.zeros((n_windows * 6, data.shape[1]))
+            RPE_test = np.zeros((n_windows * 6, 1))
+            for j in range (6):
+                start = len(participants) * n_windows * j + i * n_windows 
+                test[n_windows * j : n_windows * (j + 1)] = data.iloc[start :  start + n_windows]
+                RPE_test[n_windows * j : n_windows * (j + 1)] = RPE_or.iloc[start :  start + n_windows]
+
+            # Remove the test participant
+            for j in range(n_windows):  
+                index = [(len(participants) * n_windows) * k for k in [0, 1, 2, 3, 4, 5]]
+                index = [x + (j + i * n_windows) for x in index]
+
+                if j == 0:
+                    dataset = data.drop(index)
+                    RPE = RPE_or.drop(index)
+                else:
+                    dataset = dataset.drop(index)
+                    RPE = RPE.drop(index)
+
+            
+            A, b = linear_regression.create_matrices(dataset, RPE, "false")
+            X = linear_regression.regression()
+
+            # Save results in a matrix
+            coeff[j, :] = X
+            
+            # Apply the model to the control participant
+            predicted = test @ X
+            # De-scale the data
+            predicted = predicted.reshape(1, -1)
+            prediction = self.scaler_rpe.inverse_transform(predicted)
+            # prediction = np.round(prediction)
+
+            RPE_predicted[i, :] = prediction
+            RPE_test = RPE_test.reshape(1, -1)
+            RPE_measured[i, :] = self.scaler_rpe.inverse_transform(RPE_test)
+
+        return RPE_measured, RPE_predicted
+        
+    def visualize_results_scatter(self, RPE_measured, RPE_predicted, length_window:int):
+        participants = self.participants
+
+        # Scattered data points
+        plt.figure()
+        for i in range(len(participants)):
+            x = participants[i]
+            y_measured = RPE_measured[i, :]
+            y_predicted = RPE_predicted[i, :]
+
+            # Color the background
+            a = 0.01
+            light_blue = (173/255, 216/255, 230/255)
+            plt.axhspan(9, 11, color = light_blue, alpha = a)
+            yellow = (1, 1, 0)
+            plt.axhspan(11, 12, color = yellow, alpha = a)
+            green = (0, 1, 0)
+            plt.axhspan(12, 13, color = green, alpha = a)
+            cyan = (0, 1, 1)
+            plt.axhspan(13, 14, color = cyan, alpha = a)
+            orange = (1, 0.647, 0)
+            plt.axhspan(14, 15, color = orange, alpha = a)
+            red = (1, 0, 0)
+            plt.axhspan(15, 16, color = red, alpha = a)
+            black = (0, 0, 0)
+            plt.axhspan(16, 17, color = black, alpha = a)
+
+
+            # Plot the data points, color coded accoding to their value
+            for y1, y2 in zip(y_measured, y_predicted):
+                if y1 <= 10:
+                    c = light_blue
+                elif y1 == 11:
+                    c = yellow
+                elif y1 == 12:
+                    c = green
+                elif y1 == 13:
+                    c = cyan
+                elif y1 == 14:
+                    c = orange
+                elif y1 == 15:
+                    c = red
+                elif y1 > 15:
+                    c = black
+
+
+                # plt.scatter(x + 0.5, y1, marker = 'x', color = c)
+                plt.scatter(x, y2, marker = 'o', color = c)
+
+            # Measure the difference between model prediction and actual distribution: R^2 value. Expected values between 0 and 1
+            r_squared = r2_score(y_measured, y_predicted)
+            print(f"The R^2 value for subject {participants[i]} is: {r_squared:.4f}")
+
+        # Legend for color coding the RPE signal
+        legend_labels = ['<11 (Very light)', '11 (light)', '12 (light)', '13 (slightly hard)', '14 (hard)', '15 (really hard)', '>15 (exhaustion)']
+        legend_colors = [light_blue, yellow, green, cyan, orange, red, black]
+        legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
+        plt.legend(legend_handles, legend_labels, loc='upper center', ncol = 4, fontsize=8)
+        plt.title(f"{length_window} second long window")
+
+
+        plt.xlabel("Participant ID")
+        plt.ylabel("RPE values")
+        plt.xticks(participants)
+
+        return plt
+
+    # Visualize results as a curve
+    def visualize_results_plot(self, RPE_measured, RPE_predicted, n_windows, fig, axs, handle1, handle2):
+        x_axis = np.linspace(0, n_windows * 6 - 1, n_windows * 6)
+
+        axs[handle1, handle2].scatter(x_axis, RPE_measured, color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
+        axs[handle1, handle2].scatter(x_axis, RPE_predicted, color = (0, 0, 1), marker = 'o', s = 20, label = "Predicted values")
+        
+
+        fig.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1, fontsize=10)
+        fig.tight_layout()
 
