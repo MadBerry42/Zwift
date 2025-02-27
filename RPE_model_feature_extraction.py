@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 #-------------------------------------------------------------------------------------------------
 participants = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
-path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models"
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\Protocol\\Processed Data\\Input to model"
 
 
-n_windows = 6 # number of windows for each block
+n_windows = 1
+ # number of windows for each block
 window_length = int(180/n_windows)
 
 for j in range(1, 6 + 1):
@@ -49,7 +50,9 @@ for j in range(1, 6 + 1):
         Power_hc = Power_hc.interpolate(method = "linear")
 
         for k in range(1, n_windows + 1):
-            hr_features = Extract_HR_Features.Extract_HR_Features(HR[(k - 1) * window_length : k * window_length + 1], window_length, np.max(HR), 'hr')
+            PeakHR = 220 - age
+
+            hr_features = Extract_HR_Features.Extract_HR_Features(HR[(k - 1) * window_length : k * window_length + 1], window_length, PeakHR, 'hr')
             Power_hc_features = Extract_HR_Features.Extract_HR_Features(Power_hc[(k - 1) * window_length : k * window_length], window_length, np.max(Power_hc), 'P_hc')
             cadence_features = Extract_HR_Features.Extract_HR_Features(cadence[(k - 1) * window_length : k * window_length], window_length, np.max(cadence), 'cadence')
 
@@ -85,10 +88,11 @@ for j in range(1, 6 + 1):
 #---------------------------------------------------------------------------------------------------------------------------------------------
 length = int(180/n_windows)
 
-writer = pd.ExcelWriter(f'{path}\\RPE Models\\{length}_sec_feature_extraction.xlsx', engine = "openpyxl")
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Input files"
+writer = pd.ExcelWriter(f'{path}\\{length}_sec_feature_extraction.xlsx', engine = "openpyxl")
 wb = writer.book
 df.to_excel(writer, index = False)
-wb.save(f'{path}\\RPE Models\\{length}_sec_feature_extraction.xlsx')
+wb.save(f'{path}\\{length}_sec_feature_extraction.xlsx')
 
 print("File saved succesfully")
 

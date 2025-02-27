@@ -13,6 +13,7 @@ from scipy.optimize import curve_fit, minimize
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import r2_score
 from matplotlib.lines import Line2D
+from sklearn.utils import shuffle
 
 #----------------------------------------------------------------------------------------------------------------------------------------
     # Linear model
@@ -330,8 +331,7 @@ class RPEModel():
 
     def preprocessing(self, data_or):
         data = data_or.drop(columns = ["ID", "RPE"])
-        self.scaler = MinMaxScaler()
-        data = pd.DataFrame(self.scaler.fit_transform(data), columns = data.columns)
+        
         self.scaler_rpe = MinMaxScaler()
         RPE_or = pd.DataFrame(self.scaler_rpe.fit_transform(data_or.iloc[:, [5]]))
         
@@ -367,7 +367,18 @@ class RPEModel():
                     dataset = dataset.drop(index)
                     RPE = RPE.drop(index)
 
-            
+            # Shuffling training set and dropping xolumn indexes
+            dataset = dataset.reset_index(drop = True)
+            dataset = shuffle(dataset)
+            # Min max scaling the training set and the test set
+            scaler = MinMaxScaler()
+            dataset = pd.DataFrame(scaler.fit_transform(dataset), columns = dataset.columns)
+            # Apply PCA
+
+
+            # Doing the same to the test set
+            test = pd.Dataframe(scaler.fit_transform(test), columns = test.columns)
+
             A, b = linear_regression.create_matrices(dataset, RPE, "false")
             X = linear_regression.regression()
 
@@ -461,7 +472,7 @@ class RPEModel():
         axs[handle1, handle2].scatter(x_axis, RPE_measured, color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
         axs[handle1, handle2].scatter(x_axis, RPE_predicted, color = (0, 0, 1), marker = 'o', s = 20, label = "Predicted values")
         
+        handles, labels = axs.get_legend_handles_labels()
+        fig.legend(handles, labels, loc = 'lower right')
 
-        fig.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1, fontsize=10)
         fig.tight_layout()
-

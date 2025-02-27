@@ -10,7 +10,8 @@ n_windows = 1
 length_windows = int(180/n_windows)
 participants = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
-path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\RPE Models"
+# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\RPE Models"
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Input files"
 data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
 
@@ -23,7 +24,6 @@ RPE_measured_180, RPE_predicted_180 = RPE_model.leave_p_out(data, RPE_or)
 n_windows = 3
 length_windows = int(180/n_windows)
 
-path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\RPE Models"
 data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
 
@@ -40,8 +40,6 @@ scatter_60 = RPE_model.visualize_results_scatter(RPE_measured_60, RPE_predicted_
 print("\n")
 print("For 180 second windows:")
 scatter_180 = RPE_model.visualize_results_scatter(RPE_measured_180, RPE_predicted_180, 180)
-scatter_60.show()
-scatter_180.show()
 
 n_rows = 4
 n_columns = 4
@@ -64,7 +62,7 @@ for i in range(len(participants)):
 
 fig1.suptitle(f"60 second long windows")
 fig2.suptitle(f"180 second long windows")
-fig1.show()
-fig2.show()
+
+plt.show()
 
 final = 'boh'
