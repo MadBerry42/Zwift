@@ -11,13 +11,15 @@ n_windows = 1
 length_windows = int(180/n_windows)
 participants = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
-path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\RPE Models"
-# path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Input files"
+# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\RPE Models"
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Input files"
 data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
 
-data, RPE_or = RPE_model.preprocessing(data_or)
-RPE_measured_180, RPE_predicted_180 = RPE_model.leave_p_out(data, RPE_or)
+# data, RPE_or = RPE_model.preprocessing(data_or)
+# RPE_measured_180, RPE_predicted_180 = RPE_model.leave_p_out(data, RPE_or)
+data = RPE_model.preprocessing(data_or)
+RPE_measured_180, RPE_predicted_180 = RPE_model.leave_p_out(data)
 
 #------------------------------------------------------------------------------------------------------------------------------------
     # Second subplot: 60-second long windows
