@@ -332,16 +332,15 @@ class RPEModel():
         self.participants = participants
 
     def preprocessing(self, data_or):
-        data = data_or.drop(columns = ["ID", "RPE"])
-        self.scaler = MinMaxScaler()
-        data = pd.DataFrame(self.scaler.fit_transform(data), columns = data.columns)
-        self.scaler_rpe = MinMaxScaler()
-        RPE_or = pd.DataFrame(self.scaler_rpe.fit_transform(data_or.iloc[:, [5]]))
+        data = data_or.drop(columns = ["ID"]) #, "RPE"])
+        # self.scaler = MinMaxScaler()
+        # data = pd.DataFrame(self.scaler.fit_transform(data), columns = data.columns)
+        # self.scaler_rpe = MinMaxScaler()
+        # RPE_or = pd.DataFrame(self.scaler_rpe.fit_transform(data_or.iloc[:, [5]]))
 
+        return data #, RPE_or
 
-        return data, RPE_or
-
-    def leave_p_out(self, data, RPE_or):
+    def leave_p_out(self, data): #, RPE_or):
         linear_regression = LinearRegression(lam=1e10)
         n_windows = self.n_windows
         participants = self.participants
@@ -353,11 +352,10 @@ class RPEModel():
         for i in range(len(participants)):
         # Create the test participant for cross validation
             test = np.zeros((n_windows * 6, data.shape[1]))
-            RPE_test = np.zeros((n_windows * 6, 1))
             for j in range (6):
                 start = len(participants) * n_windows * j + i * n_windows 
                 test[n_windows * j : n_windows * (j + 1)] = data[start :  start + n_windows]
-                RPE_test[n_windows * j : n_windows * (j + 1)] = RPE_or.iloc[start :  start + n_windows]
+                # RPE_test[n_windows * j : n_windows * (j + 1)] = RPE_or.iloc[start :  start + n_windows]
 
             # Remove the test participant
             for j in range(n_windows):  
@@ -366,28 +364,32 @@ class RPEModel():
 
                 if j == 0:
                     dataset = data.drop(index)
-                    RPE = RPE_or.drop(index)
+                    # RPE = RPE_or.drop(index)
                 else:
                     dataset = dataset.drop(index)
-                    RPE = RPE.drop(index)
-
-            # Apply PCA on the dataset and the test set
-            n_components = min(data.shape[0], data.shape[1], test.shape[0], test.shape[1])
-            pca = PCA()
-            dataset = pca.fit_transform(dataset)
-            test = pca.transform(test)
+                    # RPE = RPE.drop(index)
 
             # Shuffling training set and dropping column indexes
-            '''dataset = dataset.reset_index(drop = True)
+            dataset = dataset.reset_index(drop = True)
             dataset = shuffle(dataset)
             # Min max scaling the training set
             scaler = MinMaxScaler()
             dataset = pd.DataFrame(scaler.fit_transform(dataset), columns = dataset.columns)
+            RPE_reported = dataset.iloc[:, [4]]
+            dataset = np.delete(dataset, 4 , 1)
 
             # Doing the same to the test set
-            test = pd.DataFrame(scaler.fit_transform(test))'''
+            RPE_test = test[:, 4]
+            test = np.delete(test, 4, 1)
+            test = pd.DataFrame(scaler.fit_transform(test))
 
-            A, b = linear_regression.create_matrices(dataset, RPE, "false")
+            # Apply PCA on the dataset and the test set
+            # n_components = min(data.shape[0], data.shape[1], test.shape[0], test.shape[1])
+            pca = PCA()
+            dataset = pca.fit_transform(dataset)
+            test = pca.transform(test)
+
+            linear_regression.create_matrices(dataset, RPE_reported, "false")
             X = linear_regression.regression()
 
             # Save results in a matrix
@@ -398,14 +400,19 @@ class RPEModel():
             # Apply the model to the control participant
             predicted = test @ X
             # De-scale the data
-            predicted = np.array(predicted)
-            predicted = predicted.reshape(1, -1)
-            prediction = self.scaler_rpe.inverse_transform(predicted)
+            test = pd.DataFrame(test)
+
+            # predicted = np.array(predicted)
+            # predicted = predicted.reshape(1, -1)
+            test.insert(4, "RPE predicted", predicted)
+            test = scaler.inverse_transform(test)
+            # prediction = scaler.inverse_transform(predicted)
             # prediction = np.round(prediction)
 
-            RPE_predicted[i, :] = prediction
+            # RPE_predicted[i, :] = predicted
+            RPE_predicted[i, :] = test[:, 4]
             RPE_test = RPE_test.reshape(1, -1)
-            RPE_measured[i, :] = self.scaler_rpe.inverse_transform(RPE_test)
+            RPE_measured[i, :] = self.scaler.inverse_transform(RPE_test)
 
         return RPE_measured, RPE_predicted
         
