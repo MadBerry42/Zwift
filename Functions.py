@@ -10,6 +10,7 @@ import math
 import pandas as pd 
 from scipy.optimize import curve_fit, minimize
 # RPE model
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import r2_score
 from matplotlib.lines import Line2D
@@ -180,8 +181,9 @@ class LinearRegression():
         lam = self.lam
         xdag = self.xdag
 
-        def reg_norm(x, A, b, lam):
+        def reg_norm(x, A, b):# , lam):
             return np.linalg.norm(A@x - b, ord = 2) + lam * (np.linalg.norm(x, ord = 1) + np.linalg.norm(x, ord=2))
+            # return np.linalg.norm(A@x - b, ord = 2)
         
         X = np.zeros((1, A.shape[1]))
         xdag = np.array(xdag)
@@ -331,10 +333,12 @@ class RPEModel():
 
     def preprocessing(self, data_or):
         data = data_or.drop(columns = ["ID", "RPE"])
-        
+        self.scaler = MinMaxScaler()
+        data = pd.DataFrame(self.scaler.fit_transform(data), columns = data.columns)
         self.scaler_rpe = MinMaxScaler()
         RPE_or = pd.DataFrame(self.scaler_rpe.fit_transform(data_or.iloc[:, [5]]))
-        
+
+
         return data, RPE_or
 
     def leave_p_out(self, data, RPE_or):
@@ -342,7 +346,7 @@ class RPEModel():
         n_windows = self.n_windows
         participants = self.participants
 
-        coeff = np.zeros((len(participants) * n_windows, data.shape[1]))
+        # coeff = np.zeros((len(participants) * n_windows, data.shape[1]))
         RPE_predicted = np.zeros((len(participants), n_windows * 6))
         RPE_measured = np.zeros((len(participants), 6 * n_windows))
 
@@ -352,7 +356,7 @@ class RPEModel():
             RPE_test = np.zeros((n_windows * 6, 1))
             for j in range (6):
                 start = len(participants) * n_windows * j + i * n_windows 
-                test[n_windows * j : n_windows * (j + 1)] = data.iloc[start :  start + n_windows]
+                test[n_windows * j : n_windows * (j + 1)] = data[start :  start + n_windows]
                 RPE_test[n_windows * j : n_windows * (j + 1)] = RPE_or.iloc[start :  start + n_windows]
 
             # Remove the test participant
@@ -367,27 +371,34 @@ class RPEModel():
                     dataset = dataset.drop(index)
                     RPE = RPE.drop(index)
 
-            # Shuffling training set and dropping xolumn indexes
-            dataset = dataset.reset_index(drop = True)
+            # Apply PCA on the dataset and the test set
+            n_components = min(data.shape[0], data.shape[1], test.shape[0], test.shape[1])
+            pca = PCA()
+            dataset = pca.fit_transform(dataset)
+            test = pca.transform(test)
+
+            # Shuffling training set and dropping column indexes
+            '''dataset = dataset.reset_index(drop = True)
             dataset = shuffle(dataset)
-            # Min max scaling the training set and the test set
+            # Min max scaling the training set
             scaler = MinMaxScaler()
             dataset = pd.DataFrame(scaler.fit_transform(dataset), columns = dataset.columns)
-            # Apply PCA
-
 
             # Doing the same to the test set
-            test = pd.Dataframe(scaler.fit_transform(test), columns = test.columns)
+            test = pd.DataFrame(scaler.fit_transform(test))'''
 
             A, b = linear_regression.create_matrices(dataset, RPE, "false")
             X = linear_regression.regression()
 
             # Save results in a matrix
+            if i == 0:
+                coeff = np.zeros((len(participants) * n_windows, dataset.shape[1]))
             coeff[j, :] = X
             
             # Apply the model to the control participant
             predicted = test @ X
             # De-scale the data
+            predicted = np.array(predicted)
             predicted = predicted.reshape(1, -1)
             prediction = self.scaler_rpe.inverse_transform(predicted)
             # prediction = np.round(prediction)
@@ -472,7 +483,7 @@ class RPEModel():
         axs[handle1, handle2].scatter(x_axis, RPE_measured, color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
         axs[handle1, handle2].scatter(x_axis, RPE_predicted, color = (0, 0, 1), marker = 'o', s = 20, label = "Predicted values")
         
-        handles, labels = axs.get_legend_handles_labels()
-        fig.legend(handles, labels, loc = 'lower right')
+        handles, labels = axs[handle1, handle2].get_legend_handles_labels()
+        fig.legend(handles, labels, loc = 'lower right', fontsize = 10)
 
         fig.tight_layout()
