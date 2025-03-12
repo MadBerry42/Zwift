@@ -54,13 +54,12 @@ power_hc = np.convolve(power_hc, window, mode = "same")
 # Plotting the signal
 t = np.linspace(beginning, final, num = len(power_hc))
 plt.figure()
-plt.plot(t, data["Power"])
-plt.plot(t, power_hc)
+plt.plot(t, data["Power"], label = "Original siganl")
+plt.plot(t, power_hc, label = "Filtered signal")
 plt.xlabel("Time [s]")
 plt.ylabel("Power output [W]")
 plt.title(f"Subject {ID}, {setup}")
 
-plt.legend("Original signal", "Filtered signal")
 
 # Feature extraction
 features_hr = Extract_HR_Features.get_features_from_hr_signal(HR, 'hr')
@@ -92,14 +91,14 @@ ax[1].set_title("Filtered signal")'''
 
 # One plot, signals overlapped
 plt.figure()
-plt.plot(t, data["Power"])
-plt.plot(t, data_filtered_bc)
+plt.plot(t, data["Power"], label = "Original data")
+plt.plot(t, data_filtered_bc, label = "Filtered data")
 plt.xlabel("Time [s]")
 plt.ylabel("Power output [W]")
 plt.title(f"Subject {ID}, {setup}")
 
-plt.legend("Original signal", "Filtered signal")
-# plt.show()
+plt.legend()
+plt.show()
 
 '''# Save data in a .csv file
 directory = f"Acquisitions\\Protocol\\Processed data\\Input to model"

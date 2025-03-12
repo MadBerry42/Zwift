@@ -136,7 +136,7 @@ class RPEModel():
         
         # Call the plot function with the necessary parameters
         Title = f"SVR_{CV_suffix}_{time_window}"
-        RPEModel.plot_results(y_test, y_test_fit, y_train, y_train_fit, r2_test, mse, rmse, r2_train, mse_train, rmse_train, CV_suffix= Title)
+        # RPEModel.plot_results(y_test, y_test_fit, y_train, y_train_fit, r2_test, mse, rmse, r2_train, mse_train, rmse_train, CV_suffix= Title)
     
         return test_results, train_results
     
@@ -183,7 +183,7 @@ class RPEModel():
             test = pd.DataFrame(scaler.transform(test))
 
             # Apply pca
-            pca = PCA()
+            pca = PCA() 
             dataset = pca.fit_transform(dataset.values)
             test = pca.transform(test)
 
@@ -195,9 +195,11 @@ class RPEModel():
             # Save coefficients
             if i == 0:
                 coeff = np.zeros((len(participants) * n_windows, dataset.shape[1]))
-            coeff[j, :] = X
+            coeff[i, :] = X
             predicted = linear_regression.predict(test)
-            
+            # Visualize the intercept to the data
+
+
             # predicted = np.round(predicted)
 
             # Save predicted and actual value for comparison
