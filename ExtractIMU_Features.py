@@ -3,8 +3,8 @@ import pandas as pd
 from get_Time_Domain_features_of_signal import get_Time_Domain_features_of_signal
 from get_Freq_Domain_features_of_signal import get_Freq_Domain_features_of_signal
 
-def ExtractIMU_Features(imu_data, WindowLength, Norm_Accel):
-
+def ExtractIMU_Features(participant, j, count:int, imu_data, WindowLength, Norm_Accel):
+    imu_data = np.array(imu_data)
     # Extract acceleration and gyroscope data from the IMU dataset
     time_data = imu_data[:, 0]  # Assuming 1st column is time
     accel_X = imu_data[:, 1]  # Acceleration in X direction
@@ -20,7 +20,7 @@ def ExtractIMU_Features(imu_data, WindowLength, Norm_Accel):
     # Calculate the number of windows
     num_samples = len(time_data)
     num_windows = num_samples // WindowLength
-    print(f"Number of IMU  windows: {num_windows}")
+    print(f"Number of IMU  windows: {num_windows}, participant: {participant}, iteration: {j}-{count}")
 
     for i in range(num_windows):
         # Define the start and end index for the window
