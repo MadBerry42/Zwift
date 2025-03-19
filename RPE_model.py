@@ -34,11 +34,11 @@ variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
 percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 14)
 variance_plot.get_num_pca_to_run(data, show_plot='True')
 variance_plot.get_heat_map(pca, data.columns, percentage)
-os.system('pause')
+plt.show()
 
 data, RPE_or = RPE_model.preprocessing(data_or)
 RPE_measured_180, RPE_predicted_180, test_180_svr, train_180_svr, pca_180 = RPE_model.leave_p_out(data, RPE_or)
-plt.close()
+# plt.close('all')
 
 loadings_180 = pd.DataFrame(pca_180.components_.T[:, 0], columns = [f"PC1"], index = data.columns)
 for i in range(1, pca_180.components_.shape[0]):

@@ -16,9 +16,9 @@ length_windows = int(180/n_windows)
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
 # path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
-path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Windowed files IMU"
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model"
 
-data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction_IMU.xlsx")
+data_or = pd.read_excel(f"{path}\\Windowed files IMU\\{length_windows}_sec_feature_extraction_IMU.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
 data, RPE_or = RPE_model.preprocessing(data_or)
 
@@ -34,7 +34,6 @@ variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
 percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 14)
 variance_plot.get_num_pca_to_run(data, show_plot='True')
 variance_plot.get_heat_map(pca, data.columns, percentage)
-os.system('pause')
 
 
     # Modeling on train and test set
@@ -55,6 +54,7 @@ for i in range(pca_180.components_.shape[0]):
 plt.title("Loading plot for component 1 and 2, 180-second windows")
 plt.xlabel(f"First Component ({pca_180.explained_variance_ratio_[2] * 100:.2f} %)")
 plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[3] * 100:.2f} %)")
+# plt.show()
 
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -63,10 +63,26 @@ plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[3] * 100:.2f} 
 n_windows = 3
 length_windows = int(180/n_windows)
 
-data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction_IMU.xlsx")
+data_or = pd.read_excel(f"{path}\\Windowed files IMU\\{length_windows}_sec_feature_extraction_IMU.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
 
 data, RPE_or = RPE_model.preprocessing(data_or)
+
+  # PCA on the whole datasest
+#--------------------------------------------------------------------------------------------------------------------------------
+scaler = MinMaxScaler()
+data = pd.DataFrame(scaler.fit_transform(data.values), columns = data.columns)
+pca = PCA() 
+dataset = pca.fit_transform(data.values)
+
+variance_plot = Functions.VisualizeResults()
+variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
+percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 24)
+variance_plot.get_num_pca_to_run(data, show_plot='True')
+variance_plot.get_heat_map(pca, data.columns, percentage)
+os.system('pause')
+
+
 RPE_measured_60, RPE_predicted_60, test_60_svr, train_60_svr, pca_60 = RPE_model.leave_p_out(data, RPE_or)
 plt.close()
 

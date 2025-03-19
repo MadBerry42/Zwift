@@ -188,11 +188,6 @@ class RPEModel():
             dataset = pca.fit_transform(dataset.values)
             test = pca.transform(test)
 
-            variance_plot = VisualizeResults()
-            variance_plot.extra_functions_for_PCA(pca, data.columns, 180/n_windows)
-            variance_plot.plot_feature_importance_long(pca, data.columns, 180)
-            variance_plot.get_num_pca_to_run(data, show_plot='True')
-
             #----------------------------------------------------------------------------------------------------------------------
                 # Linear Regression
             #----------------------------------------------------------------------------------------------------------------------
@@ -518,7 +513,7 @@ class VisualizeResults():
         # plt.savefig(save_path + f"\plot_feature_importance_long_{save_suffix}.png")
         plt.tight_layout()
         # if cp.show_explained_variance == True:
-        plt.show()
+        # plt.show()
         # plt.close('all')
     
     def get_num_pca_to_run(self, table, show_plot:bool):
@@ -561,6 +556,6 @@ class VisualizeResults():
             plt.xlim(left=0)
             plt.tick_params(axis='x', labelrotation = 45)
             
-            plt.show()
+            # plt.show()
 
         return n_components_to_use
