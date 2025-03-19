@@ -18,8 +18,22 @@ data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
 
 data, RPE_or = RPE_model.preprocessing(data_or)
-RPE_measured_180, RPE_predicted_180, test_180_svr, train_180_svr = RPE_model.leave_p_out(data, RPE_or)
+RPE_measured_180, RPE_predicted_180, test_180_svr, train_180_svr, pca_180 = RPE_model.leave_p_out(data, RPE_or)
 plt.close()
+
+loadings_180 = pd.DataFrame(pca_180.components_.T[:, 0], columns = [f"PC1"], index = data.columns)
+for i in range(1, pca_180.components_.shape[0]):
+    loadings_180 = pd.concat([loadings_180, pd.DataFrame(pca_180.components_.T[:, i], columns = [f"PC{i + 1}"], index = data.columns)], axis = 1)
+
+# Plot the loadings for the first two components
+plt.figure()
+for i in range(pca_180.components_.shape[0]):
+    plt.scatter(np.array(loadings_180.iloc[i, 0]), np.array(loadings_180.iloc[i, 1]))
+    plt.text(loadings_180.iloc[i, 0], loadings_180.iloc[i, 1], data.columns[i])
+
+plt.title("Loading plots for component 1 and 2, 180-second windows")
+plt.xlabel(f"First Component ({pca_180.explained_variance_ratio_[0] * 100:.2f} %)")
+plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[1] * 100:.2f} %)")
 #------------------------------------------------------------------------------------------------------------------------------------
     # Second subplot: 60-second long windows
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -30,12 +44,23 @@ data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
 
 data, RPE_or = RPE_model.preprocessing(data_or)
-RPE_measured_60, RPE_predicted_60, test_60_svr, train_60_svr = RPE_model.leave_p_out(data, RPE_or)
+RPE_measured_60, RPE_predicted_60, test_60_svr, train_60_svr, pca_60 = RPE_model.leave_p_out(data, RPE_or)
 plt.close()
 
-#-------------------------------------------------------------------------------------------------------------------------------------
-    # Visualize results
-#-------------------------------------------------------------------------------------------------------------------------------------
+loadings_60 = pd.DataFrame(pca_60.components_.T[:, 0], columns = [f"PC1"], index = data.columns)
+for i in range(1, pca_60.components_.shape[0]):
+    loadings_60 = pd.concat([loadings_60, pd.DataFrame(pca_60.components_.T[:, i], columns = [f"PC{i + 1}"], index = data.columns)], axis = 1)
+
+plt.figure()
+for i in range(pca_60.components_.shape[0]):
+    plt.scatter(np.array(loadings_60.iloc[i, 0]), np.array(loadings_60.iloc[i, 1]))
+    plt.text(loadings_60.iloc[i, 0], loadings_60.iloc[i, 1], data.columns[i])
+
+plt.title("Loading plots for component 1 and 2, 60-second windows")
+plt.xlabel(f"First Component ({pca_60.explained_variance_ratio_[0] * 100:.2f} %)")
+plt.ylabel(f"Second Component ({pca_60.explained_variance_ratio_[1] * 100:.2f} %)")
+
+#-------------------------------------------------------------------------------------------------------------------------------------:,    # Visualize results#-------------------------------------------------------------------------------------------------------------------------------------
 print("For 60 second windows, linear regression,")
 scatter_60 = RPE_model.visualize_results_scatter(RPE_measured_60, RPE_predicted_60, 60)
 print("For 180 second windows, linear regression,")
