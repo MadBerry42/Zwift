@@ -3,6 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import r2_score
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.decomposition import PCA
+import os
 
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -10,12 +13,28 @@ from sklearn.metrics import r2_score
 #------------------------------------------------------------------------------------------------------------------------------------
 n_windows = 1
 length_windows = int(180/n_windows)
-participants = [0, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
+participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
-path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
-# path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Input files"
+# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Windowed files"
+
 data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
 RPE_model = Functions.RPEModel(n_windows, participants)
+data, RPE_or = RPE_model.preprocessing(data_or)
+
+  # PCA on the whole datasest
+#--------------------------------------------------------------------------------------------------------------------------------
+scaler = MinMaxScaler()
+data = pd.DataFrame(scaler.fit_transform(data.values), columns = data.columns)
+pca = PCA() 
+dataset = pca.fit_transform(data.values)
+
+variance_plot = Functions.VisualizeResults()
+variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
+percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 14)
+variance_plot.get_num_pca_to_run(data, show_plot='True')
+variance_plot.get_heat_map(pca, data.columns, percentage)
+os.system('pause')
 
 data, RPE_or = RPE_model.preprocessing(data_or)
 RPE_measured_180, RPE_predicted_180, test_180_svr, train_180_svr, pca_180 = RPE_model.leave_p_out(data, RPE_or)
