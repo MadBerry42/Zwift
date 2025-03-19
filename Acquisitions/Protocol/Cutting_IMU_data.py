@@ -5,11 +5,11 @@ import os
 import csv
 
 # Importing IMU data
-ID = 11
+ID = 2
 test = 'protocol' # FTP or protocol
 fs = 200 # Data provided by the manifacturer
 
-IMU_or = pd.read_csv(f"0{ID}\\IMU Data\\Joined files\\0{ID}_limp_to_split.csv")
+IMU_or = pd.read_csv(f"C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\Protocol\\000\\IMU Data\\000_bicycle_protocol_ankle.csv")
 IMU = IMU_or.to_numpy()
 
 # Converting timestamps into seconds

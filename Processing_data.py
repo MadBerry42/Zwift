@@ -5,7 +5,7 @@ import os
 import csv
 
 # Importing IMU data
-ID = 16
+ID = 2
 test = 'protocol' # FTP or protocol
 setup = 'handcycle' # handcycle or bicycle
 

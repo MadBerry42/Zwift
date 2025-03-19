@@ -24,7 +24,7 @@ for j, ID in enumerate(subjects):
     elif ID >= 10:
         ID = f"0{ID}"
     
-    file = f"C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\{ID}_input_file.xlsx"
+    file = f"C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\Protocol\\Processed Data\\Input to model\\{ID}_input_file.xlsx"
 
     # Import data
     dataset = Functions.DataSet(file)
