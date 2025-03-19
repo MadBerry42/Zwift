@@ -20,8 +20,9 @@ class RPEModel():
         self.participants = participants
 
     def preprocessing(self, data_or):
-        data = data_or.drop(columns = ["ID", "RPE"])
         RPE_or = data_or.iloc[:, [5]]
+        data = data_or.drop(columns = ["ID", "RPE"])
+        # RPE_or = data_or.iloc[:, [5]]
         return data, RPE_or
 
     def plot_results(y_test, y_test_fit, y_train, y_train_fit, r2_test, mse, rmse, r2_train, mse_train, rmse_train, CV_suffix = ""):
@@ -428,7 +429,7 @@ class VisualizeResults():
             for idx in top_indices:
                 print(f"Feature: {features[idx]}, Contribution: {percentage[idx, i]:.1f}%")
 
-    def plot_feature_importance_long(self, pca, feature_labels, win_length):
+    def plot_feature_importance_long(self, pca, feature_labels, win_length, n_pcs:int):
         """ https://stackoverflow.com/questions/67199869/measure-of-feature-importance-in-pca?rq=1"""
         print(feature_labels)
         print(f"All Features: {len(feature_labels)}")
@@ -450,7 +451,7 @@ class VisualizeResults():
         # Get indices to reorder components
         feature_labels = feature_labels.to_list()
         sorted_indices = [feature_labels.index(f) for f in sorted_features]
-        n_pcs = 10
+        # n_pcs = 10
 
         # Reorder PCA components and percentage based on the new sorted indices
         r = np.abs(pca.components_.T)
@@ -479,7 +480,46 @@ class VisualizeResults():
         print(f"Top contributing features for {win_length}-second windows")
         VisualizeResults.print_top_contributing_features(percentage, sorted_features, "All", n_pcs=10, top_n=10)
         # VisualizeResults.save_top_contributing_features_to_csv(percentage, sorted_features, "All",n_pcs=10, top_n=10)
+        return percentage
     
+    def get_heat_map(self, pca, feature_labels, percentage):
+        # feature_labels
+        # idxes = [x_idx, y_idx, z_idx, remainder_idx]
+        # idxes = [i for i in idxes if len(i) != 0]
+        # print(f"Number of features in feature vector: {len(feature_labels)}")
+        explained_var = VisualizeResults.trunc((pca.explained_variance_ratio_ * 100), decs = 0)
+        explained_var = explained_var.astype(int)
+
+        cm = 1/2.54
+        fig = plt.figure(figsize=(30*cm, 35*cm))
+
+        sub = fig.add_subplot()
+        im = sub.imshow(percentage, cmap='Blues', 
+                                    origin='upper',
+                                    aspect='auto',
+                                    )
+        temp_var = percentage.shape[0]
+        n_components = percentage.shape[1]
+        for i in range(n_components):
+            for j in range(temp_var):
+                text = sub.text(i, j, percentage[j, i],
+                                ha="center", va="center", color="k")
+        sub.set_yticks(np.arange(len(feature_labels)), labels=feature_labels)
+        # sub.set_xticks(np.arange(len(range(pca.n_components_))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(pca.n_components_)])
+        sub.set_xticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
+        sub.xaxis.tick_top()
+        sub.tick_params(axis='x', labelrotation = 45, )
+        sub.tick_params(axis='y', labelrotation = 30)
+        cbar = fig.figure.colorbar(im)
+        cbar.ax.set_ylabel("Percentage contribution to PCs", rotation=-90, va="bottom")
+        # fig.suptitle(f'Features contribution to PCs')
+        # fig.text(x = 0.08, y = 0.08, s = r"Cell numbers are the percentage of contrubition of explained variance relative in the realationship between the individual PC and Feature", color="k")
+        # if cp._first_loop == True and cp.save_plots == True:
+        # plt.savefig(save_path + f"\plot_feature_importance_long_{save_suffix}.png")
+        plt.tight_layout()
+        # if cp.show_explained_variance == True:
+        plt.show()
+        # plt.close('all')
     
     def get_num_pca_to_run(self, table, show_plot:bool):
         """Input the table that's to be used for pca to find it's pca n_components. Returns n_components to use"""
