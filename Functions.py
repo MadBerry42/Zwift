@@ -187,6 +187,11 @@ class RPEModel():
             dataset = pca.fit_transform(dataset.values)
             test = pca.transform(test)
 
+            variance_plot = VisualizeResults()
+            variance_plot.extra_functions_for_PCA(pca, data.columns, 180/n_windows)
+            variance_plot.plot_feature_importance_long(pca, data.columns, 180)
+            variance_plot.get_num_pca_to_run(data, show_plot='True')
+
             #----------------------------------------------------------------------------------------------------------------------
                 # Linear Regression
             #----------------------------------------------------------------------------------------------------------------------
@@ -198,7 +203,6 @@ class RPEModel():
             coeff[i, :] = X
             predicted = linear_regression.predict(test)
             # Visualize the intercept to the data
-
 
             # predicted = np.round(predicted)
 
@@ -234,7 +238,7 @@ class RPEModel():
             svr.fit(dataset, RPE)
             RPE_predicted_svr[i, :] = svr.predict(test)'''
 
-        return RPE_measured, RPE_predicted, results_svr_test, results_svr_train
+        return RPE_measured, RPE_predicted, results_svr_test, results_svr_train, pca
 
 
     def visualize_results_scatter(self, RPE_measured, RPE_predicted, length_window:int):
@@ -325,4 +329,198 @@ class RPEModel():
 
         fig.tight_layout()
             
+class VisualizeResults():
+    def __init__(self):
+        pass
 
+    def extra_functions_for_PCA(self, pca, feature_labels, win_length:int): #, save_path, save_suffix):
+        """Perform PCA-related functions, including plotting explained variance and feature importance."""
+        
+        # Get explained variance ratio as a percentage
+        explained_var_ratio = pca.explained_variance_ratio_ * 100
+        num_components = len(explained_var_ratio)
+
+        # Calculate cumulative explained variance
+        cumulative_var = np.cumsum(explained_var_ratio)
+
+        # Explained variance bar plot
+        plt.figure(figsize=(5, 5))
+        plt.bar(np.arange(num_components) , explained_var_ratio, alpha=0.9, align='center', color='skyblue')
+        plt.plot(np.arange(num_components) , cumulative_var, color='blue', label='Cumulative Explained Variance (%)')
+        plt.ylabel('Explained Variance (%)')
+        plt.xlabel('Principal Component')
+        plt.title(f'Explained Variance by Principal Components, {win_length}-second windows')
+        # Add dashed line at 95% cumulative explained variance
+        plt.axhline(y=95, color='red', linestyle='-', label='95% Threshold')
+
+        # Add text annotations on the bars
+        for i, v in enumerate(explained_var_ratio):
+            plt.text(i, v, f"{v:.2f}", ha='center', va='bottom')
+
+        # Set xticks at positions 1, 2, 3, ..., up to the number of PCs
+        plt.xticks(np.arange(num_components), [f"PC{i+1}" for i, v in enumerate(explained_var_ratio)], rotation=45)
+        # Set y-ticks and add a 95% tick mark
+        yticks = np.arange(0, 101, 20)  # Y-ticks from 0 to 100 in increments of 10
+        plt.yticks(yticks)
+        # Add the legend
+        legend = plt.legend( loc='center',bbox_to_anchor=(0.5, 0.5), title="Legend", frameon=True)
+
+    def trunc(values, decs=0):
+        return np.trunc(values * 10**decs) / (10**decs)
+
+    def categorize_features(self, feature_labels):
+            gyro_features = []
+            accel_features = []
+            other_features = []
+
+            for feature in feature_labels:
+                if 'gyro' in feature:
+                    gyro_features.append(feature)
+                elif 'accel' in feature:
+                    accel_features.append(feature)
+                elif 'imu' in feature:
+                    accel_features.append(feature)
+                else:
+                    other_features.append(feature)
+            
+            return gyro_features, accel_features, other_features
+    
+    def shorten_feature_names(features):
+    # Example: shorten names by removing 'gyro', 'accel', etc.
+        return [f.replace('_gyro', '').replace('_norm_accel', '').replace('_imu','').replace('(hz)_','').strip() for f in features]
+
+    def save_top_contributing_features_to_csv(percentage, features, category_name, n_pcs=10, top_n=10, filename="top_features.csv"):
+        """
+        Saves the top `top_n` contributing features for each PC in a given category to a CSV file.
+        """
+        results = []
+
+        for i in range(n_pcs):
+            # Sort features by their percentage contribution in descending order
+            sorted_indices = np.argsort(percentage[:, i])[::-1]
+            top_indices = sorted_indices[:top_n]
+            
+            # Collect the top contributing features for this PC
+            for idx in top_indices:
+                results.append({
+                    # "Category": category_name,
+                    "Principal Component": f"PC{i+1}",
+                    "Feature": features[idx],
+                    "Contribution (%)": round(percentage[idx, i], 1)
+                })
+    
+        # Convert the results to a DataFrame and save to CSV
+        df = pd.DataFrame(results)
+        df.to_csv(filename, index=False)
+        print(f"\nTop features saved to {filename}")
+
+    def print_top_contributing_features(percentage, features, category_name, n_pcs=10, top_n=10):
+        """
+        Prints the top `top_n` contributing features in each PC for a given category of features.
+        """
+        for i in range(n_pcs):
+            # Sort features by their percentage contribution in descending order
+            sorted_indices = np.argsort(percentage[:, i])[::-1]
+            top_indices = sorted_indices[:top_n]
+            
+            # Print the top contributing features for this PC
+            #  print(f"\nTop {top_n} contributing {category_name} features for PC{i+1}:")
+            for idx in top_indices:
+                print(f"Feature: {features[idx]}, Contribution: {percentage[idx, i]:.1f}%")
+
+    def plot_feature_importance_long(self, pca, feature_labels, win_length):
+        """ https://stackoverflow.com/questions/67199869/measure-of-feature-importance-in-pca?rq=1"""
+        print(feature_labels)
+        print(f"All Features: {len(feature_labels)}")
+
+        gyro_features, accel_features, other_features = VisualizeResults.categorize_features(self, feature_labels)
+
+        print("Gyroscope Features:", gyro_features)
+        print("Accelerometer Features:", accel_features)
+        print("Other Features:", other_features)
+        # Print counts
+        print(f"Gyroscope Features: {len(gyro_features)}")
+        print(f"Accelerometer Features: {len(accel_features)}")
+        print(f"Other Features: {len(other_features)}")
+
+
+        # Combine features in the desired order: gyro, accel, other
+        sorted_features = gyro_features + accel_features + other_features
+
+        # Get indices to reorder components
+        feature_labels = feature_labels.to_list()
+        sorted_indices = [feature_labels.index(f) for f in sorted_features]
+        n_pcs = 10
+
+        # Reorder PCA components and percentage based on the new sorted indices
+        r = np.abs(pca.components_.T)
+        r = r[sorted_indices, :n_pcs]
+        percentage = r / r.sum(axis=0)
+        percentage = np.array(percentage) * 100
+        percentage = VisualizeResults.trunc(percentage, decs=1)
+
+        # Get indices to reorder components for each category
+        gyro_indices = [feature_labels.index(f) for f in gyro_features]
+        accel_indices = [feature_labels.index(f) for f in accel_features]
+        other_indices = [feature_labels.index(f) for f in other_features]
+
+        # Shorten the feature names for Gyroscope, Accelerometer, and Other features
+        shortened_gyro_features = VisualizeResults.shorten_feature_names(gyro_features)
+        shortened_accel_features = VisualizeResults.shorten_feature_names(accel_features)
+        shortened_other_features = VisualizeResults.shorten_feature_names(other_features)
+    
+        # Gyroscope Features
+        percentage_gyro = percentage[:len(gyro_features), :n_pcs]
+        # Accelerometer Features
+        percentage_accel = percentage[len(gyro_features):len(gyro_features)+len(accel_features), :n_pcs]
+        # Other Features
+        percentage_other = percentage[len(gyro_features)+len(accel_features):, :n_pcs]
+
+        print(f"Top contributing features for {win_length}-second windows")
+        VisualizeResults.print_top_contributing_features(percentage, sorted_features, "All", n_pcs=10, top_n=10)
+        # VisualizeResults.save_top_contributing_features_to_csv(percentage, sorted_features, "All",n_pcs=10, top_n=10)
+    
+    
+    def get_num_pca_to_run(self, table, show_plot:bool):
+        """Input the table that's to be used for pca to find it's pca n_components. Returns n_components to use"""
+
+        [x, y] = table.shape
+        pca = PCA(n_components=(min(x, y)))
+        varpca = pca.fit(table)
+        
+        cumsums = np.cumsum(pca.explained_variance_ratio_)
+            
+        idx_of_95 = 0
+        idx_of_95_val = 0
+        n_components_to_use = 0
+        for idx, i in enumerate(cumsums):
+            n_components_to_use += 1
+            if i >= 0.95:
+                idx_of_95 = idx+1
+                
+                idx_of_95_val = i
+                break
+
+        if show_plot:
+            import matplotlib.pyplot as plt
+
+            fig = plt.figure()
+            n_components = n_components_to_use + 5
+            ps = [f'PC{i+1}' for i in range(n_components)]
+            ps.insert(0, '')
+            exp_var = pca.explained_variance_ratio_[:n_components].tolist()
+            exp_var.insert(0, 0)
+            cumsumed = np.cumsum(exp_var)
+            # plt.plot(ps, np.cumsum(pca.explained_variance_ratio_[:n_components]))
+            plt.plot(ps, cumsumed)
+            plt.annotate(f"{idx_of_95}, {idx_of_95_val:.2f}", xy=(idx_of_95, idx_of_95_val), xytext=(idx_of_95 - 3, idx_of_95_val + 0.05),
+                            arrowprops=dict(arrowstyle="->"))
+            plt.bar(ps, exp_var, width=0.35)
+            plt.axhline(y=0.95, color='r', linestyle='--')
+            plt.suptitle(f"explained variance")
+            plt.xlim(left=0)
+            plt.tick_params(axis='x', labelrotation = 45)
+            
+            plt.show()
+
+        return n_components_to_use
