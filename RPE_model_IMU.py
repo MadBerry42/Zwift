@@ -25,15 +25,16 @@ data, RPE_or = RPE_model.preprocessing(data_or)
   # PCA on the whole datasest
 #--------------------------------------------------------------------------------------------------------------------------------
 scaler = MinMaxScaler()
-data = pd.DataFrame(scaler.fit_transform(data.values), columns = data.columns)
+dataset = pd.DataFrame(scaler.fit_transform(data.values), columns = data.columns)
 pca = PCA() 
-dataset = pca.fit_transform(data.values)
+dataset = pca.fit_transform(dataset.values)
 
 variance_plot = Functions.VisualizeResults()
 variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
 percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 14)
-variance_plot.get_num_pca_to_run(data, show_plot='True')
-variance_plot.get_heat_map(pca, data.columns, percentage)
+variance_plot.get_num_pca_to_run(dataset, show_plot='True')
+fig_heat = variance_plot.get_heat_map(pca, data.columns, percentage, 80, 10, 'vertical')
+fig_heat.show()
 
 
     # Modeling on train and test set

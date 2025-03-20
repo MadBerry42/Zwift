@@ -477,45 +477,67 @@ class VisualizeResults():
         # VisualizeResults.save_top_contributing_features_to_csv(percentage, sorted_features, "All",n_pcs=10, top_n=10)
         return percentage
     
-    def get_heat_map(self, pca, feature_labels, percentage):
-        # feature_labels
-        # idxes = [x_idx, y_idx, z_idx, remainder_idx]
-        # idxes = [i for i in idxes if len(i) != 0]
-        # print(f"Number of features in feature vector: {len(feature_labels)}")
+    def get_heat_map(self, pca, feature_labels, percentage, height, width, orientation:str):
         explained_var = VisualizeResults.trunc((pca.explained_variance_ratio_ * 100), decs = 0)
         explained_var = explained_var.astype(int)
 
-        cm = 1/2.54
-        fig = plt.figure(figsize=(30*cm, 35*cm))
+        if orientation == "horizontal":
+            percentage = percentage.T
+            fig = plt.figure(figsize=(width, height))
 
-        sub = fig.add_subplot()
-        im = sub.imshow(percentage, cmap='Blues', 
-                                    origin='upper',
-                                    aspect='auto',
-                                    )
-        temp_var = percentage.shape[0]
-        n_components = percentage.shape[1]
-        for i in range(n_components):
-            for j in range(temp_var):
-                text = sub.text(i, j, percentage[j, i],
-                                ha="center", va="center", color="k")
-        sub.set_yticks(np.arange(len(feature_labels)), labels=feature_labels)
-        # sub.set_xticks(np.arange(len(range(pca.n_components_))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(pca.n_components_)])
-        sub.set_xticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
-        sub.xaxis.tick_top()
-        sub.tick_params(axis='x', labelrotation = 45, )
-        sub.tick_params(axis='y', labelrotation = 30)
-        cbar = fig.figure.colorbar(im)
-        cbar.ax.set_ylabel("Percentage contribution to PCs", rotation=-90, va="bottom")
-        # fig.suptitle(f'Features contribution to PCs')
-        # fig.text(x = 0.08, y = 0.08, s = r"Cell numbers are the percentage of contrubition of explained variance relative in the realationship between the individual PC and Feature", color="k")
-        # if cp._first_loop == True and cp.save_plots == True:
-        # plt.savefig(save_path + f"\plot_feature_importance_long_{save_suffix}.png")
-        plt.tight_layout()
-        # if cp.show_explained_variance == True:
-        # plt.show()
-        # plt.close('all')
-    
+            sub = fig.add_subplot()
+            im = sub.imshow(percentage, cmap='Blues', 
+                                        origin='upper',
+                                        aspect='auto',
+                                        )
+            temp_var = percentage.shape[1]
+            n_components = percentage.shape[0]
+            for i in range(n_components):
+                for j in range(temp_var):
+                    text = sub.text(j, i, percentage[i, j],
+                                    ha="center", va="center", color="k", rotation = 90)
+
+
+            sub.set_xticks(np.arange(len(feature_labels)), labels=feature_labels)
+            # sub.set_xticks(np.arange(len(range(pca.n_components_))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(pca.n_components_)])
+            sub.set_yticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
+            sub.xaxis.tick_top()
+            sub.tick_params(axis='y', labelrotation = 30)
+            sub.tick_params(axis='x', labelrotation = 90)
+            cbar = fig.figure.colorbar(im)
+            cbar.ax.set_xlabel("Percentage contribution to PCs", rotation=-90, va="bottom")
+            fig.suptitle(f'Features contribution to PCs')
+
+        elif orientation == "vertical":
+            fig = plt.figure(figsize=(width, height))
+
+            sub = fig.add_subplot()
+            im = sub.imshow(percentage, cmap='Blues', 
+                                        origin='upper',
+                                        aspect='auto',
+                                        )
+            temp_var = percentage.shape[0]
+            n_components = percentage.shape[1]
+            for i in range(n_components):
+                for j in range(temp_var):
+                    text = sub.text(i, j, percentage[j, i],
+                                    ha="center", va="center", color="k")
+
+
+            sub.set_yticks(np.arange(len(feature_labels)), labels=feature_labels)
+            # sub.set_xticks(np.arange(len(range(pca.n_components_))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(pca.n_components_)])
+            sub.set_xticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
+            sub.xaxis.tick_top()
+            sub.tick_params(axis='y', labelrotation = 0)
+            sub.tick_params(axis='x', labelrotation = 30)
+            cbar = fig.figure.colorbar(im)
+            cbar.ax.set_xlabel("Percentage contribution to PCs", rotation=-90, va="bottom")
+            fig.suptitle(f'Features contribution to PCs')
+
+        return fig
+
+
+
     def get_num_pca_to_run(self, table, show_plot:bool):
         """Input the table that's to be used for pca to find it's pca n_components. Returns n_components to use"""
 
