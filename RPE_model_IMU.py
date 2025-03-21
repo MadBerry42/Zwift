@@ -1,7 +1,9 @@
+import matplotlib
+matplotlib.use("TkAgg")
 import Functions
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 import numpy as np
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import MinMaxScaler
@@ -15,12 +17,19 @@ n_windows = 1
 length_windows = int(180/n_windows)
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
-# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
+IMU = "False"
 path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model"
+# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
 
-data_or = pd.read_excel(f"{path}\\Windowed files IMU\\{length_windows}_sec_feature_extraction_IMU.xlsx")
+if IMU == "True":
+    data_or = pd.read_excel(f"{path}\\Windowed files IMU\\{length_windows}_sec_feature_extraction_IMU.xlsx")
+else:
+    data_or = pd.read_excel(f"{path}\\Windowed files\\{length_windows}_sec_feature_extraction.xlsx")   
+
 RPE_model = Functions.RPEModel(n_windows, participants)
 data, RPE_or = RPE_model.preprocessing(data_or)
+
+plt.show()
 
   # PCA on the whole datasest
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -33,9 +42,13 @@ variance_plot = Functions.VisualizeResults()
 variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
 percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 14)
 variance_plot.get_num_pca_to_run(dataset, show_plot='True')
-fig_heat = variance_plot.get_heat_map(pca, data.columns, percentage, 80, 10, 'vertical')
-fig_heat.show()
 
+if IMU == "False":
+    fig_heat = variance_plot.get_heat_map(pca, data.columns, percentage[:, 0:5], 10, 10, 'vertical')
+    fig_heat.show()
+
+# variance_plot.get_colored_table(pca, data.columns, percentage)
+plt.show()
 
     # Modeling on train and test set
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -50,13 +63,13 @@ for i in range(1, pca_180.components_.shape[0]):
 plt.figure()
 for i in range(pca_180.components_.shape[0]):
     plt.scatter(np.array(loadings_180.iloc[i, 0]), np.array(loadings_180.iloc[i, 1]))
-    plt.text(loadings_180.iloc[i, 2], loadings_180.iloc[i, 3], data.columns[i])
+    plt.text(loadings_180.iloc[i, 0], loadings_180.iloc[i, 1], data.columns[i])
 
 plt.title("Loading plot for component 1 and 2, 180-second windows")
 plt.xlabel(f"First Component ({pca_180.explained_variance_ratio_[2] * 100:.2f} %)")
 plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[3] * 100:.2f} %)")
-# plt.show()
 
+plt.show()
 
 #------------------------------------------------------------------------------------------------------------------------------------
     # Second subplot: 60-second long windows
@@ -64,14 +77,20 @@ plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[3] * 100:.2f} 
 n_windows = 3
 length_windows = int(180/n_windows)
 
-data_or = pd.read_excel(f"{path}\\Windowed files IMU\\{length_windows}_sec_feature_extraction_IMU.xlsx")
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model"
+# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
+
+if IMU:
+    data_or = pd.read_excel(f"{path}\\Windowed files IMU\\{length_windows}_sec_feature_extraction_IMU.xlsx")
+else:
+    data_or = pd.read_excel(f"{path}\\Windowed files\\{length_windows}_sec_feature_extraction.xlsx")   
 RPE_model = Functions.RPEModel(n_windows, participants)
 
 data, RPE_or = RPE_model.preprocessing(data_or)
 
   # PCA on the whole datasest
 #--------------------------------------------------------------------------------------------------------------------------------
-scaler = MinMaxScaler()
+'''scaler = MinMaxScaler()
 data = pd.DataFrame(scaler.fit_transform(data.values), columns = data.columns)
 pca = PCA() 
 dataset = pca.fit_transform(data.values)
@@ -81,13 +100,14 @@ variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
 percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 24)
 variance_plot.get_num_pca_to_run(data, show_plot='True')
 variance_plot.get_heat_map(pca, data.columns, percentage)
-os.system('pause')
+os.system('pause')'''
 
 
 RPE_measured_60, RPE_predicted_60, test_60_svr, train_60_svr, pca_60 = RPE_model.leave_p_out(data, RPE_or)
-plt.close()
 
-loadings_60 = pd.DataFrame(pca_60.components_.T[:, 0], columns = [f"PC1"], index = data.columns)
+plt.show()
+
+'''loadings_60 = pd.DataFrame(pca_60.components_.T[:, 0], columns = [f"PC1"], index = data.columns)
 for i in range(1, pca_60.components_.shape[0]):
     loadings_60 = pd.concat([loadings_60, pd.DataFrame(pca_60.components_.T[:, i], columns = [f"PC{i + 1}"], index = data.columns)], axis = 1)
 
@@ -104,7 +124,7 @@ variance_plot = Functions.VisualizeResults()
 variance_plot.extra_functions_for_PCA(pca_60, data.columns, length_windows)
 
 variance_plot.plot_feature_importance_long(pca_60, data.columns, 60)
-variance_plot.get_num_pca_to_run(data, show_plot='True')
+variance_plot.get_num_pca_to_run(data, show_plot='True')'''
 
 #-------------------------------------------------------------------------------------------------------------------------------------
     # Visualize results
@@ -177,11 +197,16 @@ handles, labels = axs3[1].get_legend_handles_labels()
 fig3.legend(handles, labels, loc = 'upper right', fontsize = 15)
 fig3.suptitle(f"Participant {participant}")'''
 
-
-fig1.suptitle(f"60 second long windows, linear regression")
-fig2.suptitle(f"180 second long windows, linear regression")
-fig3.suptitle(f"60 second long windows, support vector regression")
-fig4.suptitle(f"180 second long windows, support vector regression")
+if IMU:
+    fig1.suptitle(f"60 second long windows, linear regression, IMU")
+    fig2.suptitle(f"180 second long windows, linear regression, IMU")
+    fig3.suptitle(f"60 second long windows, support vector regression, IMU")
+    fig4.suptitle(f"180 second long windows, support vector regression, IMU")
+else:
+    fig1.suptitle(f"60 second long windows, linear regression, no IMU")
+    fig2.suptitle(f"180 second long windows, linear regression, no IMU")
+    fig3.suptitle(f"60 second long windows, support vector regression, no IMU")
+    fig4.suptitle(f"180 second long windows, support vector regression, no IMU")
 
 plt.show()
 

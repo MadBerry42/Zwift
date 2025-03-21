@@ -12,6 +12,8 @@ from sklearn.utils import shuffle
 # Evaluating performances
 from sklearn.metrics import r2_score
 from matplotlib.lines import Line2D
+# Visualizing table
+from matplotlib.gridspec import GridSpec
 
 class RPEModel():
     def __init__(self, n_windows:int, participants):
@@ -69,10 +71,6 @@ class RPEModel():
         axes[3].set_title('Test: True vs Predicted')
         axes[3].legend()
 
-        # Adjust layout to make sure there's enough space between the subplots
-        plt.tight_layout()
-        # Show the plot
-        # plt.show()
         
 
     def run_SVR(X_train, y_train, X_test, y_test, class_names=[], CV_suffix = "", opt = None, time_window = None):
@@ -94,7 +92,7 @@ class RPEModel():
             # Perform Grid Search with Cross-Validation
             n_splits = 3
     
-            grid_search = sklearn.model_selection.GridSearchCV(estimator=model, param_grid=param_grid, cv=n_splits, n_jobs=-1)
+            grid_search = sklearn.model_selection.GridSearchCV(estimator=model, param_grid=param_grid, cv=n_splits, n_jobs=1)
         
             # Fit the model with the best parameters found
             X_train.reshape((-1, ))
@@ -136,7 +134,7 @@ class RPEModel():
         train_results   = (y_train_fit, r2_train, mse_train, rmse_train)
         
         # Call the plot function with the necessary parameters
-        Title = f"SVR_{CV_suffix}_{time_window}"
+        # Title = f"SVR_{CV_suffix}_{time_window}"
         # RPEModel.plot_results(y_test, y_test_fit, y_train, y_train_fit, r2_test, mse, rmse, r2_train, mse_train, rmse_train, CV_suffix= Title)
     
         return test_results, train_results
@@ -385,7 +383,7 @@ class VisualizeResults():
     # Example: shorten names by removing 'gyro', 'accel', etc.
         return [f.replace('_gyro', '').replace('_norm_accel', '').replace('_imu','').replace('(hz)_','').strip() for f in features]
 
-    def save_top_contributing_features_to_csv(percentage, features, category_name, n_pcs=10, top_n=10, filename="top_features.csv"):
+    '''def save_top_contributing_features_to_csv(percentage, features, category_name, n_pcs=10, top_n=10, filename="top_features.csv"):
         """
         Saves the top `top_n` contributing features for each PC in a given category to a CSV file.
         """
@@ -408,9 +406,9 @@ class VisualizeResults():
         # Convert the results to a DataFrame and save to CSV
         df = pd.DataFrame(results)
         df.to_csv(filename, index=False)
-        print(f"\nTop features saved to {filename}")
+        print(f"\nTop features saved to {filename}")'''
 
-    def print_top_contributing_features(percentage, features, category_name, n_pcs=10, top_n=10):
+    def print_top_contributing_features(percentage, features, category_name, n_pcs, top_n=10):
         """
         Prints the top `top_n` contributing features in each PC for a given category of features.
         """
@@ -431,14 +429,14 @@ class VisualizeResults():
 
         gyro_features, accel_features, other_features = VisualizeResults.categorize_features(self, feature_labels)
 
-        print("Gyroscope Features:", gyro_features)
+        # Print number of features for each cathegory
+        '''print("Gyroscope Features:", gyro_features)
         print("Accelerometer Features:", accel_features)
         print("Other Features:", other_features)
         # Print counts
         print(f"Gyroscope Features: {len(gyro_features)}")
         print(f"Accelerometer Features: {len(accel_features)}")
-        print(f"Other Features: {len(other_features)}")
-
+        print(f"Other Features: {len(other_features)}")'''
 
         # Combine features in the desired order: gyro, accel, other
         sorted_features = gyro_features + accel_features + other_features
@@ -446,7 +444,6 @@ class VisualizeResults():
         # Get indices to reorder components
         feature_labels = feature_labels.to_list()
         sorted_indices = [feature_labels.index(f) for f in sorted_features]
-        # n_pcs = 10
 
         # Reorder PCA components and percentage based on the new sorted indices
         r = np.abs(pca.components_.T)
@@ -454,6 +451,8 @@ class VisualizeResults():
         percentage = r / r.sum(axis=0)
         percentage = np.array(percentage) * 100
         percentage = VisualizeResults.trunc(percentage, decs=1)
+
+        # print(percentage[:, n_pcs - 1].sum()) # to check if the features explaining the feature is close to 1
 
         # Get indices to reorder components for each category
         gyro_indices = [feature_labels.index(f) for f in gyro_features]
@@ -473,7 +472,7 @@ class VisualizeResults():
         percentage_other = percentage[len(gyro_features)+len(accel_features):, :n_pcs]
 
         print(f"Top contributing features for {win_length}-second windows")
-        VisualizeResults.print_top_contributing_features(percentage, sorted_features, "All", n_pcs=10, top_n=10)
+        VisualizeResults.print_top_contributing_features(percentage, sorted_features, "All", n_pcs, top_n=10)
         # VisualizeResults.save_top_contributing_features_to_csv(percentage, sorted_features, "All",n_pcs=10, top_n=10)
         return percentage
     
@@ -495,17 +494,16 @@ class VisualizeResults():
             for i in range(n_components):
                 for j in range(temp_var):
                     text = sub.text(j, i, percentage[i, j],
-                                    ha="center", va="center", color="k", rotation = 90)
+                                    ha="center", va="center", color="k", rotation = 90, size = "smaller")
 
 
-            sub.set_xticks(np.arange(len(feature_labels)), labels=feature_labels)
-            # sub.set_xticks(np.arange(len(range(pca.n_components_))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(pca.n_components_)])
+            sub.set_xticks(np.arange(len(feature_labels)), labels=feature_labels,)
             sub.set_yticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
             sub.xaxis.tick_top()
             sub.tick_params(axis='y', labelrotation = 30)
             sub.tick_params(axis='x', labelrotation = 90)
             cbar = fig.figure.colorbar(im)
-            cbar.ax.set_xlabel("Percentage contribution to PCs", rotation=-90, va="bottom")
+            cbar.ax.set_ylabel("Percentage contribution to PCs", rotation=-90, va="center")
             fig.suptitle(f'Features contribution to PCs')
 
         elif orientation == "vertical":
@@ -521,25 +519,44 @@ class VisualizeResults():
             for i in range(n_components):
                 for j in range(temp_var):
                     text = sub.text(i, j, percentage[j, i],
-                                    ha="center", va="center", color="k")
+                                    ha="center", va="center", color="k", size='smaller')
 
 
-            sub.set_yticks(np.arange(len(feature_labels)), labels=feature_labels)
+            sub.set_yticks(np.arange(len(feature_labels)), labels=feature_labels, size = 8)
             # sub.set_xticks(np.arange(len(range(pca.n_components_))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(pca.n_components_)])
             sub.set_xticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
             sub.xaxis.tick_top()
             sub.tick_params(axis='y', labelrotation = 0)
             sub.tick_params(axis='x', labelrotation = 30)
             cbar = fig.figure.colorbar(im)
-            cbar.ax.set_xlabel("Percentage contribution to PCs", rotation=-90, va="bottom")
+            cbar.ax.set_ylabel("Percentage contribution to PCs", rotation=-90, va="center")
             fig.suptitle(f'Features contribution to PCs')
 
         return fig
 
+    def get_colored_table(self, pca, feature_labels, percentage, n_pcs, top_n):
+        headers = []
+        for i in range(5):
+            headers.append(f"PC{i + 1} ({pca.explained_variance_ratio_[i] * 100:.2f}%)")
+    
+        features_matrix = np.zeros(pca.n_components.shape[0], pca.n_components.shape[1])
+        for i in range(n_pcs):
+        # Sort features by their percentage contribution in descending order
+            sorted_indices = np.argsort(percentage[:, i])[::-1]
+            top_indices = sorted_indices[:top_n]
 
+            features_matrix[:, i] = percentage(top_indices, )
+
+
+
+
+
+
+
+        buffer = "boh"
 
     def get_num_pca_to_run(self, table, show_plot:bool):
-        """Input the table that's to be used for pca to find it's pca n_components. Returns n_components to use"""
+        """Input the table that's to be used for pca to find its pca n_components. Returns n_components to use"""
 
         [x, y] = table.shape
         pca = PCA(n_components=(min(x, y)))
@@ -558,7 +575,7 @@ class VisualizeResults():
                 idx_of_95_val = i
                 break
 
-        if show_plot:
+        if show_plot == "True":
             import matplotlib.pyplot as plt
 
             fig = plt.figure()
@@ -578,6 +595,4 @@ class VisualizeResults():
             plt.xlim(left=0)
             plt.tick_params(axis='x', labelrotation = 45)
             
-            # plt.show()
-
         return n_components_to_use
