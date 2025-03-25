@@ -8,6 +8,8 @@ import numpy as np
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
+from adjustText import adjust_text
+
 
 
 #------------------------------------------------------------------------------------------------------------------------------------
@@ -17,7 +19,7 @@ n_windows = 1
 length_windows = int(180/n_windows)
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
-IMU = "False"
+IMU = "True"
 path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model"
 # path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
 
@@ -47,29 +49,89 @@ if IMU == "False":
     fig_heat = variance_plot.get_heat_map(pca, data.columns, percentage[:, 0:5], 10, 10, 'vertical')
     fig_heat.show()
 
-# variance_plot.get_colored_table(pca, data.columns, percentage)
+# variance_plot.get_colored_table(pca, data.columns, percentage, n_pcs = 5, n_top = 10)
 plt.show()
 
     # Modeling on train and test set
 #--------------------------------------------------------------------------------------------------------------------------------
 RPE_measured_180, RPE_predicted_180, test_180_svr, train_180_svr, pca_180 = RPE_model.leave_p_out(data, RPE_or)
 
+    # Plot the loadings for the first two components
+#---------------------------------------------------------------------------------------------------------------------------------
 # Save the loadings in a dataframe
-loadings_180 = pd.DataFrame(pca_180.components_.T[:, 2], columns = [f"PC1"], index = data.columns)
-for i in range(1, pca_180.components_.shape[0]):
-    loadings_180 = pd.concat([loadings_180, pd.DataFrame(pca_180.components_.T[:, i], columns = [f"PC{i + 1}"], index = data.columns)], axis = 1)
+components_180 = pd.DataFrame(pca_180.components_.T, columns = [f"PC{i + 1}" for i in range(pca_180.components_.shape[0])], index = data.columns)
+loadings_180 = components_180 * np.sqrt(pca_180.explained_variance_)
 
-# Plot the loadings for the first two components
-plt.figure()
+# Original, backup code
+fig, ax = plt.subplots()
+distances = np.sqrt(loadings_180.iloc[:, 0].values**2 + loadings_180.iloc[:, 1].values**2)
+normalized_sizes = 200 * (distances / distances.max())
+# These two lines compute the distance from the origin, so that the size of the dot is proportionate to how much each feature weighs
+
 for i in range(pca_180.components_.shape[0]):
-    plt.scatter(np.array(loadings_180.iloc[i, 0]), np.array(loadings_180.iloc[i, 1]))
-    plt.text(loadings_180.iloc[i, 0], loadings_180.iloc[i, 1], data.columns[i])
+    feature_name = data.columns[i]
+    if 'cadence' in feature_name:
+        c = (128/255, 0, 32/155)
+    elif 'P_hc' in feature_name:
+        c = (1, 1, 0)
+    elif 'hr' in feature_name:
+        c = (1, 165/255, 0)
+    else:
+        c = (0, 0, 1)
+
+    plt.scatter(loadings_180.iloc[i, 0], loadings_180.iloc[i, 1], color=c, s=normalized_sizes[i] + 10)
+    ax.annotate(feature_name, (loadings_180.iloc[i, 0], loadings_180.iloc[i, 1]), 
+                fontsize = 10,
+                )
+
+ax.set_title("Loading plot for component 1 and 2, 180-second windows")
+ax.set_xlabel(f"First Component ({pca_180.explained_variance_ratio_[0] * 100:.2f} %)")
+ax.set_ylabel(f"Second Component ({pca_180.explained_variance_ratio_[1] * 100:.2f} %)")
+
+# Plot the score plot for the first two components
+# Scores are atored in the 
+plt.show()
+
+######
+plt.figure()
+distances = np.sqrt(loadings_180.iloc[:, 0].values**2 + loadings_180.iloc[:, 1].values**2)
+normalized_sizes = 100 * (distances / distances.max())
+# These two lines compute the distance from the origin, so that the size of the dot is proportionate to how much each feature weighs
+
+for i in range(pca_180.components_.shape[0]):
+    feature_name = data.columns[i]
+    if 'cadence' in feature_name:
+        c = (128/255, 0, 32/155)
+    elif 'P_hc' in feature_name:
+        c = (1, 1, 0)
+    elif 'hr' in feature_name:
+        c = (1, 165/255, 0)
+    else:
+        c = (0, 0, 1)
+
+    plt.scatter(loadings_180.iloc[i, 0], loadings_180.iloc[i, 1], color=c, s=normalized_sizes[i] + 10)
+
+# Add labels
+'''texts = []
+for x, y, feature_name in zip(loadings_180.iloc[:, 0], loadings_180.iloc[:, 1], data.columns):
+    texts.append(plt.text(x, y, feature_name))
+'''
+
+x = loadings_180.iloc[:, 0]
+y = loadings_180.iloc[:, 1]
+texts = [plt.text(x[i], y[i], data.columns[i], ha='center', va='center') for i in range(len(x))]
+adjust_text(texts, arrowprops=dict(arrowstyle='->', color='red'))
 
 plt.title("Loading plot for component 1 and 2, 180-second windows")
-plt.xlabel(f"First Component ({pca_180.explained_variance_ratio_[2] * 100:.2f} %)")
-plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[3] * 100:.2f} %)")
+plt.xlabel(f"First Component ({pca_180.explained_variance_ratio_[0] * 100:.2f} %)")
+plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[1] * 100:.2f} %)")
+plt.grid()
 
+# Plot the score plot for the first two components
 plt.show()
+
+
+
 
 #------------------------------------------------------------------------------------------------------------------------------------
     # Second subplot: 60-second long windows
@@ -101,7 +163,6 @@ percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, 
 variance_plot.get_num_pca_to_run(data, show_plot='True')
 variance_plot.get_heat_map(pca, data.columns, percentage)
 os.system('pause')'''
-
 
 RPE_measured_60, RPE_predicted_60, test_60_svr, train_60_svr, pca_60 = RPE_model.leave_p_out(data, RPE_or)
 
