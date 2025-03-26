@@ -20,8 +20,8 @@ length_windows = int(180/n_windows)
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 
 IMU = "True"
-# path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model"
-path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
+path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model"
+# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
 
 if IMU == "True":
     data_or = pd.read_excel(f"{path}\\Windowed files IMU\\{length_windows}_sec_feature_extraction_IMU.xlsx")
@@ -62,6 +62,7 @@ RPE_measured_180, RPE_predicted_180, test_180_svr, train_180_svr, pca_180 = RPE_
 n_features = 20 # Number 
 n_pcs = 2
 percentages, features, indices = Functions.VisualizeResults.sort_variables(feature_labels = data.columns, percentage = percentage, n_pcs = n_pcs, top_n = n_features)
+features = features[0] + features[1]
 
 components = pd.DataFrame(data = [[pca.components_[i, f] for f in indices] for i in range(n_pcs)], 
                           columns = [f"PC{i + 1}" for i in range(len(indices))], 
@@ -79,7 +80,6 @@ normalized_sizes = 200 * (distances / distances.max())
 
 for i in range(n_features):
     feature_name = features[i]
-    # Problema: Features ha due componenti tra cui muoversi, perciò i>2 darà index out of bound
     if 'cadence' in feature_name:
         c = (128/255, 0, 32/155)
     elif 'P_hc' in feature_name:
@@ -114,8 +114,8 @@ distances = np.sqrt(loadings.iloc[:, 0].values**2 + loadings.iloc[:, 1].values**
 normalized_sizes = 100 * (distances / distances.max())
 # These two lines compute the distance from the origin, so that the size of the dot is proportionate to how much each feature weighs
 
-for i in range(pca_180.components_.shape[1]):
-    feature_name = data.columns[i]
+for i in range(n_features):
+    feature_name = features[i]
     if 'cadence' in feature_name:
         c = (128/255, 0, 32/155)
     elif 'P_hc' in feature_name:
@@ -147,6 +147,7 @@ plt.grid()
 # Plot the score plot for the first two components
 plt.show()
 
+os.system('pause')
 
 
 
