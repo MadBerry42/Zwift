@@ -533,27 +533,44 @@ class VisualizeResults():
             fig.suptitle(f'Features contribution to PCs')
 
         return fig
-
-    def get_colored_table(self, pca, feature_labels, percentage, n_pcs, top_n):
-        headers = []
-        for i in range(5):
-            headers.append(f"PC{i + 1} ({pca.explained_variance_ratio_[i] * 100:.2f}%)")
     
-        features_matrix = np.zeros(pca.n_components.shape[0], pca.n_components.shape[1])
+    def sort_variables(feature_labels, percentage, n_pcs, top_n):
+        features_matrix = np.zeros((top_n, n_pcs))
+        features_selected = []
+        for i in range(n_pcs):
+            # Sort features by their percentage contribution in descending order
+            sorted_indices = np.argsort(percentage[:, i])[::-1]
+            top_indices = sorted_indices[:top_n]
+
+            features_matrix[:, i] = [percentage[f, i] for f in top_indices]
+            features_selected.append([feature_labels[f] for f in top_indices])
+        final = "boh"
+
+        return features_matrix, features_selected, top_indices
+
+    def get_sorted_table(self, pca, feature_labels, percentage, n_pcs, top_n):
+        column_titles = []
+        for i in range(n_pcs):
+            column_titles.append(f"PC{i + 1} ({pca.explained_variance_ratio_[i] * 100:.2f}%)")
+    
+        features_matrix = np.zeros((top_n, n_pcs))
+        features_selected = []
+
         for i in range(n_pcs):
         # Sort features by their percentage contribution in descending order
             sorted_indices = np.argsort(percentage[:, i])[::-1]
             top_indices = sorted_indices[:top_n]
 
-            features_matrix[:, i] = percentage(top_indices, )
+            features_matrix[:, i] = [percentage[f, i] for f in top_indices]
+            features_selected.append([feature_labels[f] for f in top_indices])
 
-
-
-
-
-
-
-        buffer = "boh"
+        table = pd.DataFrame(data = [[f"{features_selected[j][i]}: {features_matrix[i, j]:.2f}%" for j in range(n_pcs)] for i in range(top_n)], 
+                             columns = [f"PC{j + 1} ({pca.explained_variance_ratio_[j] * 100:.2f}%)" for j in range(n_pcs)],
+                            )
+        
+    
+        final = 'boh'
+        return table
 
     def get_num_pca_to_run(self, table, show_plot:bool):
         """Input the table that's to be used for pca to find its pca n_components. Returns n_components to use"""
