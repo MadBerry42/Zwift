@@ -613,3 +613,30 @@ class VisualizeResults():
             plt.tick_params(axis='x', labelrotation = 45)
             
         return n_components_to_use
+    
+
+class PowerOutputModel():
+    def __init__(self):
+        pass
+
+    def preprocessing(self, training, test):
+        # Normalizing and shuffling data
+        scaler = MinMaxScaler()
+        dataset = pd.DataFrame(scaler.fit_transform(training), columns = training.columns)
+        dataset= shuffle(dataset, random_state = None)
+        dataset.reset_index()
+        # Applying PCA on the test set
+        '''pca = PCA() 
+        dataset = pca.fit_transform(dataset.values)'''
+
+        # Apply the same transformation on the test set
+        test = pd.DataFrame(scaler.transform(test), columns = test.columns)
+        test.reset_index()
+        # test = pca.transform(test)
+
+        return dataset, test, scaler
+    
+    # def linear_regression(self, ):
+        
+        
+    
