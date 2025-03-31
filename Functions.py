@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import sklearn
 from sklearn.linear_model import LinearRegression
 from sklearn import svm
+from tqdm import tqdm
 # Data preprocessing
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
@@ -104,7 +105,7 @@ class RPEModel():
             best_model = grid_search.best_estimator_
     
             # Print the best parameters
-            # print(f"Best hyperparameters: {best_params}")
+            print(f"Best hyperparameters: {best_params}")
     
             #  View cross-validation fold results
             cv_results = grid_search.cv_results_
@@ -569,7 +570,6 @@ class VisualizeResults():
                             )
         
     
-        final = 'boh'
         return table
 
     def get_num_pca_to_run(self, table, show_plot:bool):
@@ -623,8 +623,13 @@ class PowerOutputModel():
         # Normalizing and shuffling data
         scaler = MinMaxScaler()
         dataset = pd.DataFrame(scaler.fit_transform(training), columns = training.columns)
-        dataset= shuffle(dataset, random_state = None)
-        dataset.reset_index()
+        dataset = dataset.reset_index()
+        dataset = dataset.drop(columns = ["index"])
+
+        scaler_output = MinMaxScaler()
+        scaler_output.fit_transform(training.loc[:, training.columns.isin(["Power bc"])])
+
+
         # Applying PCA on the test set
         '''pca = PCA() 
         dataset = pca.fit_transform(dataset.values)'''
@@ -634,9 +639,221 @@ class PowerOutputModel():
         test.reset_index()
         # test = pca.transform(test)
 
-        return dataset, test, scaler
+
+        return dataset, test, scaler_output
+
+
+    # SVR model
+#--------------------------------------------------------------------------------------------------------------------------------
+    def run_SVR(self, X_train, y_train, X_test, y_test):
+
+        print('SVR hyper parameter tuning')
+
+        # Define the model (without specifying kernel yet)
+        model = svm.SVR()
+
+        # Define hyperparameters to search, including different kernels
+        param_grid = {
+            'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],  # Try different kernels
+            'C': [0.1, 1, 10, 100],  # Regularization parameter
+            'gamma': ['scale', 'auto', 0.01, 0.1, 1],  # Kernel coefficient
+            'epsilon': [0.1, 0.2, 0.5],  # Epsilon in the epsilon-SVR
+        }
     
-    # def linear_regression(self, ):
+        # Perform Grid Search with Cross-Validation
+        n_splits = 3
+
+        # grid_search = sklearn.model_selection.GridSearchCV(estimator=model, param_grid=param_grid, cv=n_splits, n_jobs=-1)
+        grid_search = sklearn.model_selection.RandomizedSearchCV(estimator=model, param_distributions=param_grid, cv=n_splits, n_jobs=-1, n_iter=50)
+    
+        # Fit the model with the best parameters found
+        # X_train.reshape((-1, ))
+        # y_train = y_train.reshape((-1, ))
+        # grid_search.fit(X_train, y_train.values.flatten())  #, groups=train_groups
+        
+        # Fit the model to the data
+        grid_search.fit(X_train, y_train.values.flatten())
+
+    
+        # Get the best parameters and model
+        best_params = grid_search.best_params_
+        best_model = grid_search.best_estimator_
+
+        # Print the best parameters
+        print(f"Best hyperparameters: {best_params}")
+
+        #  View cross-validation fold results
+        cv_results = grid_search.cv_results_
+        # print("Fold-wise test results:")
+        for i in range(3):  # Assuming 3-fold cross-validation
+            fold_score = cv_results[f'split{i}_test_score'][grid_search.best_index_]
+            # print(f"Fold {i+1} test score: {fold_score}")
+
+        # Evaluate the model on test data
+        Overall = best_model.score(X_test, y_test)
+        # print(f"Test R^2 score: {Overall}")
+
+        model = best_model
+        # Fit the model using the training data
+        model.fit(X_train, y_train.values.flatten())
+        
+        y_test_fit      = model.predict(X_test)
+        r2_test         = model.score(X_test, y_test)
+        mse             = round(np.mean(np.square(y_test.T - y_test_fit.T)), 2)
+        rmse            = round(np.sqrt(mse), 2)
+    
+        y_train_fit     = model.predict(X_train)
+        r2_train        = model.score(X_train, y_train)
+        mse_train       = round(np.mean(np.square(y_train.T - y_train_fit.T)), 2)
+        rmse_train      = round(np.sqrt(mse_train), 2)
+        test_results    = (y_test_fit, r2_test, mse, rmse)
+        train_results   = (y_train_fit, r2_train, mse_train, rmse_train)
+
+        return test_results
+        
+class PerformPCA():
+    def __init__(self):
+        pass
+
+    # Perform PCA on the dataset
+    def perform_pca(self, dataset):
+        pca = PCA() 
+        dataset = pca.fit_transform(dataset.values)
+
+        return dataset, pca
+    
+    def plot_variance_table(self, pca, feature_labels): #, save_path, save_suffix):
+        """Perform PCA-related functions, including plotting explained variance and feature importance."""
+        
+        # Get explained variance ratio as a percentage
+        explained_var_ratio = pca.explained_variance_ratio_ * 100
+        num_components = len(explained_var_ratio)
+
+        # Calculate cumulative explained variance
+        cumulative_var = np.cumsum(explained_var_ratio)
+
+        # Explained variance bar plot
+        plt.figure(figsize=(5, 5))
+        plt.bar(np.arange(num_components), explained_var_ratio, alpha=0.9, align='center', color='skyblue')
+        plt.plot(np.arange(num_components), cumulative_var, color='blue', label='Cumulative Explained Variance (%)')
+        plt.ylabel('Explained Variance (%)')
+        plt.xlabel('Principal Component')
+        plt.title(f'Explained Variance by Principal Components')
+        # Add dashed line at 95% cumulative explained variance
+        plt.axhline(y=95, color='red', linestyle='-', label='95% Threshold')
+
+        # Add text annotations on the bars
+        for i, v in enumerate(explained_var_ratio):
+            plt.text(i, v, f"{v:.2f}", ha='center', va='bottom')
+
+        # Set xticks at positions 1, 2, 3, ..., up to the number of PCs
+        plt.xticks(np.arange(num_components), [f"PC{i+1}" for i, v in enumerate(explained_var_ratio)], rotation=45)
+        # Set y-ticks and add a 95% tick mark
+        yticks = np.arange(0, 101, 20)  # Y-ticks from 0 to 100 in increments of 10
+        plt.yticks(yticks)
+        # Add the legend
+        legend = plt.legend( loc='center',bbox_to_anchor=(0.5, 0.5), title="Legend", frameon=True)
+
+        return plt
+    
+    def print_top_contributing_features(percentage, features, n_pcs, top_n=10):
+        """
+        Prints the top `top_n` contributing features in each PC for a given category of features.
+        """
         
         
+        for i in range(n_pcs):
+            # Sort features by their percentage contribution in descending order
+            sorted_indices = np.argsort(percentage[:, i])[::-1]
+            top_indices = sorted_indices[:top_n]
+            
+            # Print the top contributing features for this PC
+            #  print(f"\nTop {top_n} contributing {category_name} features for PC{i+1}:")
+            for idx in top_indices:
+                print(f"Feature: {features[idx]}, Contribution: {percentage[idx, i]:.1f}%")
     
+    def get_heat_map(self, pca, feature_labels, percentage, height, width, orientation:str):
+        explained_var = VisualizeResults.trunc((pca.explained_variance_ratio_ * 100), decs = 0)
+        explained_var = explained_var.astype(int)
+
+        if orientation == "horizontal":
+            percentage = percentage.T
+            fig = plt.figure(figsize=(width, height))
+
+            sub = fig.add_subplot()
+            im = sub.imshow(percentage, cmap='Blues', 
+                                        origin='upper',
+                                        aspect='auto',
+                                        )
+            temp_var = percentage.shape[1]
+            n_components = percentage.shape[0]
+            for i in range(n_components):
+                for j in range(temp_var):
+                    text = sub.text(j, i, percentage[i, j],
+                                    ha="center", va="center", color="k", rotation = 90, size = "smaller")
+
+
+            sub.set_xticks(np.arange(len(feature_labels)), labels=feature_labels,)
+            sub.set_yticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
+            sub.xaxis.tick_top()
+            sub.tick_params(axis='y', labelrotation = 30)
+            sub.tick_params(axis='x', labelrotation = 90)
+            cbar = fig.figure.colorbar(im)
+            cbar.ax.set_ylabel("Percentage contribution to PCs", rotation=-90, va="center")
+            fig.suptitle(f'Features contribution to PCs')
+
+        elif orientation == "vertical":
+            fig = plt.figure(figsize=(width, height))
+
+            sub = fig.add_subplot()
+            im = sub.imshow(percentage, cmap='Blues', 
+                                        origin='upper',
+                                        aspect='auto',
+                                        )
+            temp_var = percentage.shape[0]
+            n_components = percentage.shape[1]
+            for i in range(n_components):
+                for j in range(temp_var):
+                    text = sub.text(i, j, percentage[j, i],
+                                    ha="center", va="center", color="k", size='smaller')
+
+
+            sub.set_yticks(np.arange(len(feature_labels)), labels=feature_labels, size = 8)
+            # sub.set_xticks(np.arange(len(range(pca.n_components_))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(pca.n_components_)])
+            sub.set_xticks(np.arange(len(range(n_components))), labels = [f"PC{i+1}({explained_var[i]}%)" for i in range(n_components)])
+            sub.xaxis.tick_top()
+            sub.tick_params(axis='y', labelrotation = 0)
+            sub.tick_params(axis='x', labelrotation = 30)
+            cbar = fig.figure.colorbar(im)
+            cbar.ax.set_ylabel("Percentage contribution to PCs", rotation=-90, va="center")
+            fig.suptitle(f'Features contribution to PCs')
+
+        return fig
+    
+    def get_sorted_table(self, pca, feature_labels, n_pcs, top_n):
+        # Reorder PCA components and percentage based on the new sorted indices
+        r = np.abs(pca.components_.T)
+        percentage = r / r.sum(axis=0)
+        percentage = np.array(percentage) * 100
+        
+        column_titles = []
+        for i in range(n_pcs):
+            column_titles.append(f"PC{i + 1} ({pca.explained_variance_ratio_[i] * 100:.2f}%)")
+    
+        features_matrix = np.zeros((top_n, n_pcs))
+        features_selected = []
+
+        for i in range(n_pcs):
+        # Sort features by their percentage contribution in descending order
+            sorted_indices = np.argsort(percentage[:, i])[::-1]
+            top_indices = sorted_indices[:top_n]
+
+            features_matrix[:, i] = [percentage[f, i] for f in top_indices]
+            features_selected.append([feature_labels[f] for f in top_indices])
+
+        table = pd.DataFrame(data = [[f"{features_selected[j][i]}: {features_matrix[i, j]:.2f}%" for j in range(n_pcs)] for i in range(top_n)], 
+                             columns = [f"PC{j + 1} ({pca.explained_variance_ratio_[j] * 100:.2f}%)" for j in range(n_pcs)],
+                            )
+        
+    
+        return table
