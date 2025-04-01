@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
     # Importing data and creating dataset
 #----------------------------------------------------------------------------------------------------------------------------------
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
-Skip = "Yes" # Set it to No if the Input file needs to be recreated
+Skip = "No" # Set it to No if the Input file needs to be recreated
 Model = "No"
 
 
@@ -52,14 +52,16 @@ if  Skip == "No":
         data_tmp = data_tmp.iloc[300 : 1380, :]
         data_bc = data_bc.iloc[300 : 1380, :]
 
-        # Filtering Power
+        # Filtering Data
         window_size = 15
         window = np.ones(window_size) / window_size
         window = window.flatten()
-        Power_hc = data_tmp.iloc[:, 2]
+        Power_hc = data_tmp["Power"]
         Power_hc = np.convolve(Power_hc, window, mode = "same")
-        Power_bc = data_bc.iloc[:, 0]
+        Power_bc = data_bc["Power"]
         Power_bc = np.convolve(Power_bc, window, mode = "same")
+        Cadence = data_tmp["Cadence"]
+        Cadence = np.convolve(Power_bc, window, mode = "same")
 
         personal_data = members[f"{ID}"]
 
@@ -89,7 +91,7 @@ if  Skip == "No":
     wb = writer.book
 
     data.to_excel(writer, index = False)
-    wb.save(f'{path}\\Input_file_power_model.xlsx')
+    wb.save(f'{path}\\Input_file_power_model_filtered.xlsx')
 
     print(f"Document has been saved succesfully in {path}")
 
