@@ -25,7 +25,7 @@ class RPEModel():
     def preprocessing(self, data_or):
         RPE_or = data_or.iloc[:, [5]]
         data = data_or.drop(columns = ["ID", "RPE"])
-        # RPE_or = data_or.iloc[:, [5]]
+        
         return data, RPE_or
 
     def plot_results(y_test, y_test_fit, y_train, y_train_fit, r2_test, mse, rmse, r2_train, mse_train, rmse_train, CV_suffix = ""):
@@ -154,10 +154,12 @@ class RPEModel():
             # Create the test participant for cross validation
             test = np.zeros((n_windows * 6, data.shape[1]))
             RPE_test = np.zeros((n_windows * 6, 1))
-            for j in range (6):
+            '''for j in range (6):
                 start = len(participants) * n_windows * j + i * n_windows 
                 test[n_windows * j : n_windows * (j + 1)] = data[start :  start + n_windows]
-                RPE_test[n_windows * j : n_windows * (j + 1)] = RPE_or.iloc[start :  start + n_windows]
+                RPE_test[n_windows * j : n_windows * (j + 1)] = RPE_or.iloc[start :  start + n_windows]'''
+            for j in range(len(participants)):
+                test = pd.DataFrame(data[n_windows * j * 6 : n_windows * 6 * (j + 1)])
 
             # Check if test set was extracted correctly
             '''if n_windows == 3 and i == 5:
@@ -165,7 +167,7 @@ class RPEModel():
                 print(test)'''
             
             # Remove the test participant
-            for j in range(n_windows):  
+            '''for j in range(n_windows):  
                 index = [(len(participants) * n_windows) * k for k in [0, 1, 2, 3, 4, 5]]
                 index = [x + (j + i * n_windows) for x in index]
                 if j == 0:
@@ -173,7 +175,8 @@ class RPEModel():
                     RPE = RPE_or.drop(index)
                 else:
                     dataset = dataset.drop(index)
-                    RPE = RPE.drop(index)
+                    RPE = RPE.drop(index)'''
+            
 
             # Shuffle the dataset
             dataset, RPE = shuffle(dataset, RPE, random_state = None)
@@ -614,6 +617,30 @@ class VisualizeResults():
             
         return n_components_to_use
     
+class modelRPE():
+    def __init__(self):
+        pass
+
+    def preprocessing(self, training, test):
+        # Remove RPE column, scale and shuffle
+        RPE_test = test["RPE"]
+
+        scaler = MinMaxScaler()
+        training = pd.DataFrame(scaler.fit_transform(training), columns = training.columns)
+        test = pd.DataFrame(scaler.transform(test), columns = test.columns)
+
+        # Save RPE scaler for denormalization later
+        scaler_RPE = MinMaxScaler()
+        RPE_test = scaler_RPE.fit_transform(RPE_test)
+
+        # Shuffle training set
+        training = shuffle(training, random_state = None)
+
+        return training, test, scaler_RPE
+
+    def linear_regression(self, training, test):
+        linear_reg = LinearRegression(training, test)
+
 
 class PowerOutputModel():
     def __init__(self):
