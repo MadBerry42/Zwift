@@ -6,19 +6,18 @@ import math
 
 '''Conversion of a .fit file into a .csv file'''
 # Choose before running the code
-ID = 4
-Setup = 'bicycle'
-test = 'protocol'
+ID = 18
+Setup = 'handcycle'
 
+path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - FTP tests data"
 if ID < 10:
-    file_input= f'00{ID}\\Zwift\\00{ID}_{Setup}_{test}.fit' #Path of the input .fit file
-    directory = f'00{ID}\\Zwift' #Path of the folder which will contain the output .csv file
-    file_output = f'00{ID}_{Setup}_{test}.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
+    directory = f'{path}\\00{ID}\\Zwift' #Path of the folder which will contain the output .csv file
+    file_input= f'{path}\\00{ID}\\Zwift\\00{ID}_{Setup}_FTP.fit' #Path of the input .fit file
+    file_output = f'{path}\\00{ID}_{Setup}_FTP.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
 else:
-    file_input= f'0{ID}\\Zwift\\0{ID}_{Setup}_FTP.fit' #Path of the input .fit file
-    directory = f'0{ID}\\Zwift' #Path of the folder which will contain the output .csv file
-    file_output = f'0{ID}_{Setup}_{test}.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
-
+    file_input= f'{path}\\0{ID}\\Zwift\\0{ID}_{Setup}_FTP.fit' #Path of the input .fit file
+    directory = f'{path}\\0{ID}\\Zwift' #Path of the folder which will contain the output .csv file
+    file_output = f'{path}\\0{ID}\\Zwift\\0{ID}_{Setup}_FTP.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
 # Importing the file
 fitfile = fitparse.FitFile(file_input)
 
@@ -111,6 +110,6 @@ with open(csv_file, mode='w', newline='') as file:
     writer.writerow(["Timestamp", "Position lat", "Position long", "Heart Rate", "Cadence", "Distance", "Power", "Avatar speed", "Altitude", 'Sensor'])
     writer.writerows(rows)
 
-print(f"Data hase been succesfully written to {csv_file}")
+print(f"Data has been succesfully written to {csv_file}")
  
 # Troubleshooting: if your file as not been saved a .csv file, make sure that file_output contains .csv at the end
