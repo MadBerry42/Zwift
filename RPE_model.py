@@ -3,157 +3,526 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import r2_score
+# Preprocessing
 from sklearn.preprocessing import MinMaxScaler
+# Feature extraction
+import Extract_HR_Features
+# Linear Model
+from sklearn.linear_model import LinearRegression
 from sklearn.decomposition import PCA
 import os
 
-
-#------------------------------------------------------------------------------------------------------------------------------------
-    # First subplot: 180-second long windows
-#------------------------------------------------------------------------------------------------------------------------------------
-n_windows = 1
-length_windows = int(180/n_windows)
+mode = "raw" # filtered, raw or fe (model with feature extraction)
+create_file = "No"
+feature_extraction = "No"
+model = "No"
+plots = "Yes"
+setup = "handcycle"
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
-
-# path = "C:\\Users\\maddy\\Desktop\\Roba seria\\II ciclo\\Tesi\\Acquisitions\\Input to models\\RPE Models"
-path = "C:\\Users\\maddalb\\Desktop\\git\\Zwift\\Acquisitions\\RPE model\\Windowed files"
-
-data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
-RPE_model = Functions.RPEModel(n_windows, participants)
-data, RPE_or = RPE_model.preprocessing(data_or)
-
-  # PCA on the whole datasest
-#--------------------------------------------------------------------------------------------------------------------------------
-scaler = MinMaxScaler()
-data = pd.DataFrame(scaler.fit_transform(data.values), columns = data.columns)
-pca = PCA() 
-dataset = pca.fit_transform(data.values)
-
-variance_plot = Functions.VisualizeResults()
-variance_plot.extra_functions_for_PCA(pca, data.columns, length_windows)
-percentage = variance_plot.plot_feature_importance_long(pca, data.columns, 180, n_pcs = 14)
-variance_plot.get_num_pca_to_run(data, show_plot='True')
-variance_plot.get_heat_map(pca, data.columns, percentage)
-plt.show()
-
-data, RPE_or = RPE_model.preprocessing(data_or)
-RPE_measured_180, RPE_predicted_180, test_180_svr, train_180_svr, pca_180 = RPE_model.leave_p_out(data, RPE_or)
-# plt.close('all')
-
-loadings_180 = pd.DataFrame(pca_180.components_.T[:, 0], columns = [f"PC1"], index = data.columns)
-for i in range(1, pca_180.components_.shape[0]):
-    loadings_180 = pd.concat([loadings_180, pd.DataFrame(pca_180.components_.T[:, i], columns = [f"PC{i + 1}"], index = data.columns)], axis = 1)
-
-# Plot the loadings for the first two components
-plt.figure()
-for i in range(pca_180.components_.shape[0]):
-    plt.scatter(np.array(loadings_180.iloc[i, 0]), np.array(loadings_180.iloc[i, 1]))
-    plt.text(loadings_180.iloc[i, 0], loadings_180.iloc[i, 1], data.columns[i])
-
-plt.title("Loading plots for component 1 and 2, 180-second windows")
-plt.xlabel(f"First Component ({pca_180.explained_variance_ratio_[0] * 100:.2f} %)")
-plt.ylabel(f"Second Component ({pca_180.explained_variance_ratio_[1] * 100:.2f} %)")
+path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
 #------------------------------------------------------------------------------------------------------------------------------------
-    # Second subplot: 60-second long windows
+    # Create input File
 #------------------------------------------------------------------------------------------------------------------------------------
-n_windows = 3
-length_windows = int(180/n_windows)
+if create_file == "Yes":
+    members = { "000":{"Age": 25, "Height": 160, "Weight": 58, "Gender": 1, "FTP": 49},
+            "002":{"Age": 26, "Height": 177, "Weight": 75, "Gender": 0, "FTP": 78},
+            "003":{"Age": 22, "Height": 180, "Weight": 70, "Gender": 0, "FTP": 51},
+            "004":{"Age": 22, "Height": 186, "Weight": 80, "Gender": 0, "FTP": 47},
+            "006":{"Age": 23, "Height": 174, "Weight": 87, "Gender": 1, "FTP": 51},
+            "007":{"Age": 23, "Height": 183, "Weight": 70, "Gender": 0, "FTP": 55},
+            "008":{"Age": 23, "Height": 190, "Weight": 82, "Gender": 0, "FTP": 82},
+            "009":{"Age": 32, "Height": 185, "Weight": 96, "Gender": 0, "FTP": 62},
+            "010":{"Age": 24, "Height": 160, "Weight": 56, "Gender": 1, "FTP": 48},
+            "011":{"Age": 28, "Height": 176, "Weight": 67, "Gender": 0, "FTP": 60},
+            "012":{"Age": 28, "Height": 184, "Weight": 70, "Gender": 0, "FTP": 87},
+            "013":{"Age": 25, "Height": 178, "Weight": 66, "Gender": 0, "FTP": 62},
+            "015":{"Age": 21, "Height": 176, "Weight": 73, "Gender": 0, "FTP": 60},
+            "016":{"Age": 24, "Height": 173, "Weight": 59, "Gender": 1, "FTP": 37},
+            }
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f'00{ID}'
+        elif ID >= 10:
+            ID = f'0{ID}'
+        
+        data_tmp = pd.read_csv(f"{path}\\{ID}\\Zwift\\{ID}_{setup}_protocol.csv", usecols = ["Power", "Heart Rate", "Cadence", "Distance", "RPE"])
 
-data_or = pd.read_excel(f"{path}\\{length_windows}_sec_feature_extraction.xlsx")
-RPE_model = Functions.RPEModel(n_windows, participants)
+        data_tmp = data_tmp.iloc[300 : 1380, :]
 
-data, RPE_or = RPE_model.preprocessing(data_or)
-RPE_measured_60, RPE_predicted_60, test_60_svr, train_60_svr, pca_60 = RPE_model.leave_p_out(data, RPE_or)
-plt.close()
+        if mode == "filtered":
+            window_size = 15
+            window = np.ones(window_size) / window_size
+            window = window.flatten()
+            Power = data_tmp["Power"]
+            Power = pd.DataFrame(np.convolve(Power, window, mode = "same"))
+            Cadence = data_tmp["Cadence"]
+            cadence = pd.DataFrame(np.convolve(Cadence, window, mode = "same"))
+            Heart_rate = data_tmp["Heart Rate"]
+            Heart_rate = pd.DataFrame(np.convolve(Heart_rate, window, mode = "same"))
+        elif mode == "raw":
+            Power = data_tmp["Power"]
+            Heart_rate = data_tmp["Heart Rate"]
+            cadence = data_tmp["Cadence"]
 
-loadings_60 = pd.DataFrame(pca_60.components_.T[:, 0], columns = [f"PC1"], index = data.columns)
-for i in range(1, pca_60.components_.shape[0]):
-    loadings_60 = pd.concat([loadings_60, pd.DataFrame(pca_60.components_.T[:, i], columns = [f"PC{i + 1}"], index = data.columns)], axis = 1)
+        # Remove outliers
+        Heart_rate = Heart_rate.replace(0, np.nan)    
+        Heart_rate = Heart_rate.interpolate(method = "linear").to_numpy().flatten()
+        Heart_rate = Heart_rate
+        Power = Power.replace(0, np.nan)
+        Power = Power.interpolate(method = "linear").to_numpy().flatten()
+        cadence = cadence.replace(0, np.nan)
+        cadence = cadence.interpolate(method = "linear").to_numpy().flatten()
 
-plt.figure()
-for i in range(pca_60.components_.shape[0]):
-    plt.scatter(np.array(loadings_60.iloc[i, 0]), np.array(loadings_60.iloc[i, 1]))
-    plt.text(loadings_60.iloc[i, 0], loadings_60.iloc[i, 1], data.columns[i])
+        # Personal Info
+        personal_data = members[f"{ID}"]
+        Gender = personal_data["Gender"] * np.ones((len(Heart_rate)))
+        Age = personal_data["Age"] * np.ones((len(Heart_rate)))
+        PeakHR = (220 - Age) * np.ones((len(Heart_rate)))
+        Height = personal_data["Height"] * np.ones((len(Heart_rate)))
+        Weight = personal_data["Weight"] * np.ones((len(Heart_rate)))
+        FTP = personal_data["FTP"] * np.ones((len(Heart_rate)))
+            
+        data_tmp = pd.DataFrame({"ID": ID, "Gender": Gender, "Age": Age, "Height": Height, "Weight": Weight, "FTP": FTP, "PeakHR": PeakHR, "Heart Rate": Heart_rate, "Cadence": cadence, "Power": Power, "RPE": data_tmp["RPE"]})
 
-plt.title("Loading plots for component 1 and 2, 60-second windows")
-plt.xlabel(f"First Component ({pca_60.explained_variance_ratio_[0] * 100:.2f} %)")
-plt.ylabel(f"Second Component ({pca_60.explained_variance_ratio_[1] * 100:.2f} %)")
+        if i == 0:
+            data = data_tmp
+        else:
+            data = pd.concat([data, data_tmp], axis = 0)
+        
+        # Save separate files for participants
+        writer = pd.ExcelWriter(f'{path}\\Input to models\\Power output models\\{ID}_Input_{setup}_{mode}.xlsx', engine = "openpyxl")
+        wb = writer.book
+        data_tmp.to_excel(writer, index = False)
+        wb.save(f'{path}\\Input to models\\Power output models\\{ID}_Input_{setup}_{mode}.xlsx')
 
-#-------------------------------------------------------------------------------------------------------------------------------------:,    # Visualize results#-------------------------------------------------------------------------------------------------------------------------------------
-print("For 60 second windows, linear regression,")
-scatter_60 = RPE_model.visualize_results_scatter(RPE_measured_60, RPE_predicted_60, 60)
-print("For 180 second windows, linear regression,")
-scatter_180 = RPE_model.visualize_results_scatter(RPE_measured_180, RPE_predicted_180, 180)
+    # Save one file containing all participants
+    '''writer = pd.ExcelWriter(f'{path}\\Input to models\\Power output models\\Input_RPE_{setup}_{mode}.xlsx', engine = "openpyxl")
+    wb = writer.book
+    data.to_excel(writer, index = False)
+    wb.save(f'{path}\\Input to models\\Power output models\\Input_RPE_{setup}_{mode}.xlsx')'''
 
-print("For 60 second windows, support vector regression,")
-r_squared = np.mean(test_60_svr[:, -3])
-mse = np.mean(test_60_svr[:, -2])
-rmse = np.mean(test_60_svr[:, -1])
-print(f"R^2 is {r_squared}")
-print(f"MSE is {mse}")
-print(f"RMSE is {rmse}")
+    print("File succesfully saved!")
 
-print("For 180 second windows, support vector regression,")
-r_squared = np.mean(test_180_svr[:, -3])
-mse = np.mean(test_180_svr[:, -2])
-rmse = np.mean(test_180_svr[:, -1])
-print(f"R^2 is {r_squared}")
-print(f"MSE is {mse}")
-print(f"RMSE is {rmse}")
+if feature_extraction == "Yes":
+    # Feature Extraction
+#----------------------------------------------------------------------------------------------------------------------------------------------
+    data = pd.read_excel(f"{path}\\Input to Models\\RPE Models\\Input_RPE_{setup}_{mode}.xlsx")
+    Age = data["Age"]
+    Heart_rate = data["Heart Rate"]
+    Power = data["Power"]
+    Cadence = data["Cadence"]
+
+    # 180 second windows on the whole dataset
+    window_length = 180
+    hr_features = Extract_HR_Features.Extract_HR_Features(Heart_rate, window_length, 220 - Age, 'hr')
+    Power_features = Extract_HR_Features.Extract_HR_Features(Power, window_length, 0, 'Power')
+    cadence_features = Extract_HR_Features.Extract_HR_Features(Cadence, window_length, 0, 'cadence')
+
+    # Create DataFrame and save Excel File
+    n_windows = 1080 / window_length
+    P_info = pd.concat([data.iloc[int(1080 * i): int(1080 * i + n_windows)].loc[:, ["ID", "Gender", "Age", "Height", "Weight", "FTP", "RPE"]] 
+     for i in range(len(participants))], 
+    ignore_index=True)
+
+    df = pd.concat([P_info, hr_features, Power_features, cadence_features], axis = 1)
+
+    writer = pd.ExcelWriter(f'{path}\\Input to models\\RPE Models\\Input_RPE_{setup}_{mode}_feature_extraction_{window_length}.xlsx', engine = "openpyxl")
+    wb = writer.book
+    df.to_excel(writer, index = False)
+    wb.save(f'{path}\\Input to models\\RPE Models\\Input_RPE_{setup}_{mode}_feature_extraction_{window_length}.xlsx')
+
+    # 60 second windows on the whole dataset
+    window_length = 60
+    hr_features = Extract_HR_Features.Extract_HR_Features(Heart_rate, window_length, 220 - Age, 'hr')
+    Power_features = Extract_HR_Features.Extract_HR_Features(Power, window_length, 0, 'Power')
+    cadence_features = Extract_HR_Features.Extract_HR_Features(Cadence, window_length, 0, 'cadence')
+
+    # Create DataFrame and save Excel File
+    n_windows = 1080 / window_length
+    P_info = pd.concat([data.iloc[int(1080 * i): int(1080 * i + n_windows)].loc[:, ["ID", "Gender", "Age", "Height", "Weight", "FTP", "RPE"]] 
+     for i in range(len(participants))], 
+    ignore_index=True)
+
+    df = pd.concat([P_info, hr_features, Power_features, cadence_features], axis = 1)
+
+    writer = pd.ExcelWriter(f'{path}\\Input to models\\RPE Models\\Input_RPE_{setup}_{mode}_feature_extraction_{window_length}.xlsx', engine = "openpyxl")
+    wb = writer.book
+    df.to_excel(writer, index = False)
+    wb.save(f'{path}\\Input to models\\RPE Models\\Input_RPE_{setup}_{mode}_feature_extraction_{window_length}.xlsx')
 
 
-n_rows = 4
-n_columns = 4
-fig1, axs1 = plt.subplots(n_rows, n_columns)
-fig2, axs2 = plt.subplots(n_rows, n_columns)
-fig3, axs3 = plt.subplots(n_rows, n_columns)
-fig4, axs4 = plt.subplots(n_rows, n_columns)
 
-k = 0
-j = 0
-for i in range(len(participants)):
-    if i % n_columns == 0 and i > 0:
-        j = 0
-        k = k + 1
-    if i % n_columns != 0:
-        j = j + 1
 
-    plot_60 = RPE_model.visualize_results_plot(RPE_measured_60[i, :], RPE_predicted_60[i, :], 3, fig1, axs1, j, k)
-    axs1[j, k].set_title(f"Participant {participants[i]}, r^2: {r2_score(RPE_measured_60[i, :], RPE_predicted_60[i, :]):.3f}")
-    plot_180 = RPE_model.visualize_results_plot(RPE_measured_180[i, :], RPE_predicted_180[i, :], 1, fig2, axs2, j, k)
-    axs2[j, k].set_title(f"Participant {participants[i]}, r^2: {r2_score(RPE_measured_180[i, :], RPE_predicted_180[i, :]):.3f}")
-    # SVR
-    RPE_model.visualize_results_plot(RPE_measured_60[i, :], test_60_svr[i, 0:18], 3, fig3, axs3, j, k)
-    axs3[j, k].set_title(f"Participant {participants[i]}, r^2: {test_60_svr[i, -3]:.3f}")
-    RPE_model.visualize_results_plot(RPE_measured_180[i, :], test_180_svr[i, 0:6], 1, fig4, axs4, j, k)
-    axs4[j, k].set_title(f"Participant {participants[i]}, r^2: {test_180_svr[i, -3]:.3f}")
+    print("Feature extraction files succesfully saved!")
+
+if model == "Yes":
+    path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
+
+    n_windows = 1
+    window_length = int(180/n_windows)
+
+    model_RPE = Functions.modelRPE()
+    fig, axs = plt.subplots(4, 4)
+    for i, ID in enumerate(participants):
+        if mode != "fe":
+            data = pd.read_excel(f"{path}\\Input to Models\\RPE Models\\Input_RPE_{setup}_{mode}.xlsx")
+        elif mode == "fe":
+            data = pd.read_excel(f"{path}\\\\Input to Models\\RPE Models\\Input_RPE_{setup}_{mode}_feature_extraction_{window_length}.xlsx")
+        
+            # Extract training and test set
+        #-----------------------------------------------------------------------------------------------------------------------------
+        test_or = data[data["ID"] == ID]
+        training_or = data[data["ID"] != ID]
+
+        training = training_or.drop(columns = ["ID"])
+        test = test_or.drop(columns = ["ID"])
+
+            # Linear regression Model
+        #------------------------------------------------------------------------------------------------------------------------------
+        linear_model = LinearRegression.fit(training.iloc[:, training.columns != ["RPE"]], training["RPE"])
+        RPE_predicted = linear_model.predict(test.iloc[:, test.columns != "RPE"])
+        
+            # Visualize results
+        #-------------------------------------------------------------------------------------------------------------------------------
+        axs[i] = plt.scatter(RPE_predicted)
+        axs[i] = plt.scatter(test["RPE"])
+
+        # SVR and PCA?
+        training, test, scaler_RPE = model_RPE.preprocessing(training, test) # Removes ID, shuffle and scales datase
+
+#-----------------------------------------------------------------------------------------------------------------------
+    # Plots
+#-----------------------------------------------------------------------------------------------------------------------
+if plots == "Yes":
+    mode = "raw"
+
+    # Define figure details
+    n_rows = 4
+    n_columns = 4
+    window_length = 180
+    n_windows = int(6 * 180/window_length)
+
+    slopes = np.zeros((len(participants), 7))
+    intercepts = np.zeros((len(participants), 7))
     
+    fig1, axs1 = plt.subplots(n_rows, n_columns)
+    axs1 = axs1.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
 
-# Visualize data from one single participant
-'''participant = 10
-m = participants.index(participant)
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
 
-fig5, axs5 = plt.subplots(2)
-x_axis = np.linspace(0, 17, 18)
-axs5[0].scatter(x_axis, RPE_measured_60[m, :], color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
-axs5[0].scatter(x_axis, RPE_measured_60[m, :], color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
-axs5[0].scatter(x_axis, RPE_predicted_60[m, :], color = (0, 0, 1), marker = 'o', s = 20, label = "Predicted values")
-axs5[0].set_title("60 second window")
-x_axis = np.linspace(0, 5, 6)
-axs5[1].scatter(x_axis, RPE_measured_180[m, :], color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
-axs5[1].scatter(x_axis, RPE_predicted_180[m, :], color = (0, 0, 1), marker = 'o', s = 20, label = "Predicted values")
-axs5[1].set_title("180 second window")
+        fig1.suptitle("Handcycle, Power vs HR")
+        y = data_hc["Heart Rate"]
+        x = data_hc["Power"]
+        # Plot and color the dots: red for fixed RPE, blue for fixed Power
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs1[i].scatter(x_value, y[j], color = 'r')
+            if j >= len(x)/2:
+                axs1[i].scatter(x_value, y[j], color = 'b')
 
-handles, labels = axs3[1].get_legend_handles_labels()
-fig3.legend(handles, labels, loc = 'upper right', fontsize = 15)
-fig3.suptitle(f"Participant {participant}")'''
+        axs1[i].set_ylabel("Heart Rate [bpm]")
+        axs1[i].set_xlabel("Power [W]")
 
+        # Find and plot the intercept and compute r^2
+        slope, intercept = np.polyfit(x, y, 1)
+        x_line = np.linspace(min(x), max(x), 100) 
+        y_line = slope * x + intercept
+        axs1[i].plot(x, y_line, color='green') 
+        slopes[i, 0] = slope
+        intercepts[i, 0] = intercept
+        r_squared = r2_score(y, y_line)
+        axs1[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
 
-fig1.suptitle(f"60 second long windows, linear regression")
-fig2.suptitle(f"180 second long windows, linear regression")
-fig3.suptitle(f"60 second long windows, support vector regression")
-fig4.suptitle(f"180 second long windows, support vector regression")
+    plt.tight_layout()
+    plt.show()
 
-plt.show()
+        # HR vs Power: Bicycle
+    #-------------------------------------------------------------------------------------------------------------------
+    fig2, axs2 = plt.subplots(n_rows, n_columns)
+    axs2 = axs2.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
 
-final = 'boh'
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
+
+        fig2.suptitle("Bicycle, Power vs HR")
+        y = data_bc["Heart Rate"]
+        x = data_bc["Power"]
+
+        # Plot and color the dots: red for fixed RPE, blue for fixed Power
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs2[i].scatter(x_value, y[j], color = 'r')
+            if j >= len(x)/2:
+                axs2[i].scatter(x_value, y[j], color = 'b')
+        
+        axs2[i].set_ylabel("Heart Rate [bpm]")
+        axs2[i].set_xlabel("Power [W]")
+
+        # Find the intercept
+        slope, intercept = np.polyfit(x, y, 1)
+        y_line = slope * x + intercept 
+        axs2[i].plot(x, y_line, color='green') 
+        slopes[i, 1] = slope
+        intercepts[i, 1] = intercept
+        r_squared = r2_score(y, y_line)
+        axs2[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
+
+    plt.tight_layout()
+    plt.show()
+
+        # Power and % of PeakHR: Handcycle
+    #--------------------------------------------------------------------------------------------------------------------
+    fig3, axs3 = plt.subplots(n_rows, n_columns)
+    axs3 = axs3.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
+
+        fig3.suptitle("Handcycle, Power vs % PeakHR")
+        y = data_hc["Heart Rate"]/data_hc["PeakHR"]
+        x = data_bc["Power"]
+
+        # Plot and color the dots: red for fixed RPE, blue for fixed Power
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs3[i].scatter(x_value, y[j], color = 'r')
+            if j >= len(x)/2:
+                axs3[i].scatter(x_value, y[j], color = 'b')
+
+        axs3[i].set_ylabel("Heart Rate [bpm]")
+        axs3[i].set_xlabel("Power [W]")
+
+        # Find the intercept
+        slope, intercept = np.polyfit(x, y, 1)
+        y_line = slope * x + intercept 
+        axs3[i].plot(x, y_line, color='green') 
+        slopes[i, 2] = slope
+        intercepts[i, 2] = intercept
+        r_squared = r2_score(y, y_line)
+        axs3[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
+    
+    plt.tight_layout()
+    plt.show()
+
+        # Power and % of PeakHR: Bicycle
+    #----------------------------------------------------------------------------------------------------------------------
+    fig4, axs4 = plt.subplots(n_rows, n_columns)
+    axs4 = axs4.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
+
+        fig4.suptitle("Bicycle, Power vs % PeakHR")
+        y = data_bc["Heart Rate"]/data_bc["PeakHR"]
+        x = data_bc["Power"]
+                # Plot and color the dots: red for fixed RPE, blue for fixed Power
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs4[i].scatter(x_value, y[j], color = 'r')
+            if j >= len(x)/2:
+                axs4[i].scatter(x_value, y[j], color = 'b')
+        axs4[i].set_xlabel("Heart Rate [bpm]")
+        axs4[i].set_ylabel("Power [W]")
+
+        # Find the intercept
+        slope, intercept = np.polyfit(x, y, 1)
+        y_line = slope * x + intercept 
+        axs4[i].plot(x, y_line, color='green') 
+        slopes[i, 3] = slope
+        intercepts[i, 3] = intercept
+        r_squared = r2_score(y, y_line)
+        axs4[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
+    
+    plt.tight_layout()
+    plt.show()
+
+        # Power vs avgHR: Handcycle
+    #-------------------------------------------------------------------------------------------------------------------
+    fig5, axs5 = plt.subplots(n_rows, n_columns)
+    axs5 = axs5.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
+
+        fig5.suptitle("Handcycle, Power vs avgHR")
+        power = data_hc["Power"]
+        # RPE = data_hc["RPE"]
+        Heart_rate = data_hc["Heart Rate"]
+        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(Heart_rate[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        
+        # Plot and color the dots: red for fixed RPE, blue for fixed Power
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs5[i].scatter(x_value, y[j], color = 'r')
+            if j >= len(x)/2:
+                axs5[i].scatter(x_value, y[j], color = 'b')
+
+        axs5[i].set_ylabel("RPE")
+        axs5[i].set_xlabel("Power [W]")
+
+        # Find the intercept
+        slope, intercept = np.polyfit(x, y, 1)
+        y_line = slope * x + intercept 
+        axs5[i].plot(x, y_line, color='green') 
+        slopes[i, 4] = slope
+        intercepts[i, 4] = intercept
+        r_squared = r2_score(y, y_line)
+        axs5[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
+
+    plt.tight_layout()
+    plt.show()
+
+         # Power vs avgHR: Handcycle
+    #------------------------------------------------------------------------------------------------------------------------
+    fig6, axs6 = plt.subplots(n_rows, n_columns)
+    axs6 =axs6.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
+
+        fig6.suptitle("Bicycle, Power vs avgHR")
+        power = data_bc["Power"]
+        # RPE = data_bc["RPE"]
+        Heart_rate = data_bc["Heart Rate"]
+        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(Heart_rate[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs6[i].scatter(x_value, y[j], color = 'r')
+            if j >= len(x)/2:
+                axs6[i].scatter(x_value, y[j], color = 'b')
+
+        axs6[i].set_ylabel("RPE")
+        axs6[i].set_xlabel("Power [W]")
+
+        # Find the intercept and the r^2 value
+        slope, intercept = np.polyfit(x, y, 1) 
+        y_line = slope * x + intercept 
+        axs6[i].plot(x, y_line, color='green') 
+        slopes[i, 5] = slope
+        intercepts[i, 5] = intercept
+        r_squared = r2_score(y, y_line)
+        axs6[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
+    
+    plt.tight_layout()
+    plt.show()
+
+        # Comparing Powers
+    #--------------------------------------------------------------------------------------------------------------------------
+    fig7, axs7 = plt.subplots(n_rows, n_columns)
+    axs7 =axs7.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
+
+        fig7.suptitle("Handcycle vs bicycle power")
+        y = data_hc["Power"]
+        x = data_bc["Power"]
+        axs7[i].scatter(x, y)
+        axs7[i].set_ylabel("Power hc [W]")
+        axs7[i].set_xlabel("Power bc [W]")
+        slope, intercept = np.polyfit(x, y, 1) 
+        y_line = slope * x + intercept 
+        axs7[i].plot(x, y_line, color='red') 
+        slopes[i, 6] = slope
+        intercepts[i, 6] = intercept
+        r_squared = r2_score(y, y_line)
+        axs7[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
+
+    plt.tight_layout()
+    plt.show()
+
+        # Comparing RPE lines: bicycle and handcycle
+    #--------------------------------------------------------------------------------------------------------------------
+    fig8, axs8 = plt.subplots(n_rows, n_columns)
+    axs8 = axs8.flatten()
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
+
+        fig8.suptitle("Handcycle vs bicycle power")
+        power = data_hc["Power"]
+        RPE = data_hc["RPE"]
+        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(RPE[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs6[i].scatter(x_value, y[j], color = 'r')
+            if j >= len(x)/2:
+                axs6[i].scatter(x_value, y[j], color = 'b')
+
+        axs8[i].set_ylabel("Power [W]")
+        axs8[i].set_xlabel("RPE")
+
+        # Find the intercept and the r^2 value
+        slope, intercept = np.polyfit(x, y, 1) 
+        y_line = slope * x + intercept 
+        axs8[i].plot(x, y_line, color='red') 
+
+        # Bicycle data
+        power = data_bc["Power"]
+        RPE = data_bc["RPE"]
+        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(RPE[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+
+        for j, x_value in enumerate(x):
+            if j < len(x)/2:
+                axs6[i].scatter(x_value, y[j], color = 'g')
+            if j >= len(x)/2:
+                axs6[i].scatter(x_value, y[j], color = 'k')
+
+        axs8[i].set_ylabel("Power [W]")
+        axs8[i].set_xlabel("RPE")
+
+        # Find the intercept and the r^2 value
+        slope, intercept = np.polyfit(x, y, 1) 
+        y_line = slope * x + intercept 
+        axs8[i].plot(x, y_line, color='green') 
+        axs8[i].set_title(f"Participant {ID}")
+
+    plt.tight_layout()
+    plt.show()
