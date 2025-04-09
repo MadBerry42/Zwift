@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import r2_score
+import math
 # Preprocessing
 from sklearn.preprocessing import MinMaxScaler
 # Feature extraction
@@ -11,12 +12,14 @@ import Extract_HR_Features
 from sklearn.linear_model import LinearRegression
 from sklearn.decomposition import PCA
 import os
+from matplotlib.lines import Line2D
 
 mode = "raw" # filtered, raw or fe (model with feature extraction)
-create_file = "No"
+create_file = "Yes"
 feature_extraction = "No"
 model = "No"
-plots = "Yes"
+plots = "No"
+model_perc_hr = "No"
 setup = "handcycle"
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
 path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
@@ -24,20 +27,20 @@ path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
     # Create input File
 #------------------------------------------------------------------------------------------------------------------------------------
 if create_file == "Yes":
-    members = { "000":{"Age": 25, "Height": 160, "Weight": 58, "Gender": 1, "FTP": 49},
-            "002":{"Age": 26, "Height": 177, "Weight": 75, "Gender": 0, "FTP": 78},
-            "003":{"Age": 22, "Height": 180, "Weight": 70, "Gender": 0, "FTP": 51},
-            "004":{"Age": 22, "Height": 186, "Weight": 80, "Gender": 0, "FTP": 47},
-            "006":{"Age": 23, "Height": 174, "Weight": 87, "Gender": 1, "FTP": 51},
-            "007":{"Age": 23, "Height": 183, "Weight": 70, "Gender": 0, "FTP": 55},
-            "008":{"Age": 23, "Height": 190, "Weight": 82, "Gender": 0, "FTP": 82},
-            "009":{"Age": 32, "Height": 185, "Weight": 96, "Gender": 0, "FTP": 62},
-            "010":{"Age": 24, "Height": 160, "Weight": 56, "Gender": 1, "FTP": 48},
-            "011":{"Age": 28, "Height": 176, "Weight": 67, "Gender": 0, "FTP": 60},
-            "012":{"Age": 28, "Height": 184, "Weight": 70, "Gender": 0, "FTP": 87},
-            "013":{"Age": 25, "Height": 178, "Weight": 66, "Gender": 0, "FTP": 62},
-            "015":{"Age": 21, "Height": 176, "Weight": 73, "Gender": 0, "FTP": 60},
-            "016":{"Age": 24, "Height": 173, "Weight": 59, "Gender": 1, "FTP": 37},
+    members = { "000":{"Age": 25, "Height": 160, "Weight": 58, "Gender": 1, "FTP": 49},#, "Activity": [0, 0, 60*7, 16*60*7]},
+            "002":{"Age": 26, "Height": 177, "Weight": 75, "Gender": 0, "FTP": 78},# "Activity": [0, 4*45, 6*30, 4*60*7]},
+            "003":{"Age": 22, "Height": 180, "Weight": 70, "Gender": 0, "FTP": 51},# "Activity": [4*60, 7*15, 3*30, 8*60*7]},
+            "004":{"Age": 22, "Height": 186, "Weight": 80, "Gender": 0, "FTP": 47},# "Activity": [3*90, 1*5, 5*30, 6*60*7]},
+            "006":{"Age": 23, "Height": 174, "Weight": 87, "Gender": 1, "FTP": 51},# "Activity": [2*40, 0, 7*120, 9*60*7 ]},
+            "007":{"Age": 23, "Height": 183, "Weight": 70, "Gender": 0, "FTP": 55},# "Activity": [0, 0, 60*7, 16*60*7]}, # Unsure about the sitting time
+            "008":{"Age": 23, "Height": 190, "Weight": 82, "Gender": 0, "FTP": 82},# "Activity": [4*90, 0, 7*30, 8*60*7]},
+            "009":{"Age": 32, "Height": 185, "Weight": 96, "Gender": 0, "FTP": 62},# "Activity": [0, 0, 5*60, 12*60*7]},
+            "010":{"Age": 24, "Height": 160, "Weight": 56, "Gender": 1, "FTP": 48},# "Activity": [5*60, 2*60, 7*30, 10*60*7]}, # Time spent for activity is grossly estimated
+            "011":{"Age": 28, "Height": 176, "Weight": 67, "Gender": 0, "FTP": 60},# "Activity": [0, 0, 7*40, 12*60*7]},
+            "012":{"Age": 28, "Height": 184, "Weight": 70, "Gender": 0, "FTP": 87},# "Activity": [0, 0, 4*20, 7*45, 10*60*7]},
+            "013":{"Age": 25, "Height": 178, "Weight": 66, "Gender": 0, "FTP": 62},# "Activity": [1*60, 1*60, 3*35, 4*60*7]},
+            "015":{"Age": 21, "Height": 176, "Weight": 73, "Gender": 0, "FTP": 60},# "Activity": [4*80, 6*120, 7*8*60, 3*60*7]},
+            "016":{"Age": 24, "Height": 173, "Weight": 59, "Gender": 1, "FTP": 37},# "Activity": [2*45, 2*30, 7*60, 9*60*7]},
             }
     for i, ID in enumerate(participants):
         if ID < 10:
@@ -151,8 +154,6 @@ if feature_extraction == "Yes":
     wb.save(f'{path}\\Input to models\\RPE Models\\Input_RPE_{setup}_{mode}_feature_extraction_{window_length}.xlsx')
 
 
-
-
     print("Feature extraction files succesfully saved!")
 
 if model == "Yes":
@@ -193,6 +194,33 @@ if model == "Yes":
 #-----------------------------------------------------------------------------------------------------------------------
     # Plots
 #-----------------------------------------------------------------------------------------------------------------------
+class Plots():
+    def __init__(self):
+        pass
+    
+    def plot_graphs(self, x, y, title:str, x_label:str, y_label:str, ID, i, fig, axs, color_coded:str):
+        if color_coded == "No": 
+            # Plot the dots
+            axs[i].scatter(x, y, color='b', s = 10)
+
+            # Find the intercept and plot it
+            slope, intercept = np.polyfit(x, y, 1) 
+            y_line = slope * x + intercept 
+            axs[i].plot(x, y_line, color='k') 
+
+            # Set figure properties
+            axs[i].set_xlabel(x_label)
+            axs[i].set_ylabel(y_label)
+            if intercept >= 0:
+                axs[i].set_title(f"{ID}: y = {slope:.3f} * x + {intercept:.3f}")
+            else:
+                axs[i].set_title(f"{ID}: y = {slope:.3f} * x - {abs(intercept):.3f}")
+            fig.suptitle(title)
+
+        return slope, intercept
+
+draw_plots = Plots()
+
 if plots == "Yes":
     mode = "raw"
 
@@ -220,11 +248,14 @@ if plots == "Yes":
         y = data_hc["Heart Rate"]
         x = data_hc["Power"]
         # Plot and color the dots: red for fixed RPE, blue for fixed Power
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs1[i].scatter(x_value, y[j], color = 'r')
-            if j >= len(x)/2:
-                axs1[i].scatter(x_value, y[j], color = 'b')
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
+
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs1[i].scatter(x_red, y_red, color='r', label = "Fixed RPE")
+        axs1[i].scatter(x_blue, y_blue, color='b', label = "Fixed power")
 
         axs1[i].set_ylabel("Heart Rate [bpm]")
         axs1[i].set_xlabel("Power [W]")
@@ -239,6 +270,8 @@ if plots == "Yes":
         r_squared = r2_score(y, y_line)
         axs1[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
 
+    handles, labels = axs1[i].get_legend_handles_labels()
+    fig1.legend(handles, labels, loc='lower right')
     plt.tight_layout()
     plt.show()
 
@@ -260,11 +293,14 @@ if plots == "Yes":
         x = data_bc["Power"]
 
         # Plot and color the dots: red for fixed RPE, blue for fixed Power
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs2[i].scatter(x_value, y[j], color = 'r')
-            if j >= len(x)/2:
-                axs2[i].scatter(x_value, y[j], color = 'b')
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
+
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs2[i].scatter(x_red, y_red, color='r', label = "Fixed RPE")
+        axs2[i].scatter(x_blue, y_blue, color='b', label = "Fixed power")
         
         axs2[i].set_ylabel("Heart Rate [bpm]")
         axs2[i].set_xlabel("Power [W]")
@@ -278,6 +314,8 @@ if plots == "Yes":
         r_squared = r2_score(y, y_line)
         axs2[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
 
+    handles, labels = axs2[i].get_legend_handles_labels()
+    fig2.legend(handles, labels, loc='lower right')
     plt.tight_layout()
     plt.show()
 
@@ -295,17 +333,20 @@ if plots == "Yes":
         data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
 
         fig3.suptitle("Handcycle, Power vs % PeakHR")
-        y = data_hc["Heart Rate"]/data_hc["PeakHR"]
-        x = data_bc["Power"]
+        y = data_hc["Heart Rate"]/data_hc["PeakHR"] * 100
+        x = data_hc["Power"]
 
         # Plot and color the dots: red for fixed RPE, blue for fixed Power
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs3[i].scatter(x_value, y[j], color = 'r')
-            if j >= len(x)/2:
-                axs3[i].scatter(x_value, y[j], color = 'b')
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
 
-        axs3[i].set_ylabel("Heart Rate [bpm]")
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs3[i].scatter(x_red, y_red, color='r', label = "Fixed RPE")
+        axs3[i].scatter(x_blue, y_blue, color='b', label = "Fixed power")
+
+        axs3[i].set_ylabel("% Peak HR")
         axs3[i].set_xlabel("Power [W]")
 
         # Find the intercept
@@ -317,6 +358,8 @@ if plots == "Yes":
         r_squared = r2_score(y, y_line)
         axs3[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
     
+    handles, labels = axs3[i].get_legend_handles_labels()
+    fig3.legend(handles, labels, loc='lower right')
     plt.tight_layout()
     plt.show()
 
@@ -330,20 +373,23 @@ if plots == "Yes":
         else:
             ID = f"0{ID}"
 
-        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
         data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
 
         fig4.suptitle("Bicycle, Power vs % PeakHR")
-        y = data_bc["Heart Rate"]/data_bc["PeakHR"]
-        x = data_bc["Power"]
-                # Plot and color the dots: red for fixed RPE, blue for fixed Power
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs4[i].scatter(x_value, y[j], color = 'r')
-            if j >= len(x)/2:
-                axs4[i].scatter(x_value, y[j], color = 'b')
-        axs4[i].set_xlabel("Heart Rate [bpm]")
-        axs4[i].set_ylabel("Power [W]")
+        x = data_bc["Heart Rate"]/data_bc["PeakHR"] * 100
+        y = data_bc["Power"]
+        # Plot and color the dots: red for fixed RPE, blue for fixed Power
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
+
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs4[i].scatter(x_red, y_red, color='r', label = "Fixed RPE")
+        axs4[i].scatter(x_blue, y_blue, color='b', label = "Fixed power")
+
+        axs4[i].set_ylabel("% Peak HR")
+        axs4[i].set_xlabel("Power [W]")
 
         # Find the intercept
         slope, intercept = np.polyfit(x, y, 1)
@@ -354,6 +400,8 @@ if plots == "Yes":
         r_squared = r2_score(y, y_line)
         axs4[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
     
+    handles, labels = axs4[i].get_legend_handles_labels()
+    fig4.legend(handles, labels, loc='lower right')
     plt.tight_layout()
     plt.show()
 
@@ -374,17 +422,20 @@ if plots == "Yes":
         power = data_hc["Power"]
         # RPE = data_hc["RPE"]
         Heart_rate = data_hc["Heart Rate"]
-        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
-        x = np.array([np.mean(Heart_rate[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        y = np.array([np.mean(Heart_rate[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
         
         # Plot and color the dots: red for fixed RPE, blue for fixed Power
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs5[i].scatter(x_value, y[j], color = 'r')
-            if j >= len(x)/2:
-                axs5[i].scatter(x_value, y[j], color = 'b')
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
 
-        axs5[i].set_ylabel("RPE")
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs5[i].scatter(x_red, y_red, color='r', label = "Fixed RPE")
+        axs5[i].scatter(x_blue, y_blue, color='b', label = "Fixed power")
+
+        axs5[i].set_ylabel("Average HR [bpm]")
         axs5[i].set_xlabel("Power [W]")
 
         # Find the intercept
@@ -396,13 +447,15 @@ if plots == "Yes":
         r_squared = r2_score(y, y_line)
         axs5[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
 
+    handles, labels = axs5[i].get_legend_handles_labels()
+    fig5.legend(handles, labels, loc='lower right')
     plt.tight_layout()
     plt.show()
 
-         # Power vs avgHR: Handcycle
+         # Power vs avgHR: Bicycle
     #------------------------------------------------------------------------------------------------------------------------
     fig6, axs6 = plt.subplots(n_rows, n_columns)
-    axs6 =axs6.flatten()
+    axs6 = axs6.flatten()
     for i, ID in enumerate(participants):
         if ID < 10:
             ID = f"00{ID}"
@@ -416,16 +469,19 @@ if plots == "Yes":
         power = data_bc["Power"]
         # RPE = data_bc["RPE"]
         Heart_rate = data_bc["Heart Rate"]
-        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
-        x = np.array([np.mean(Heart_rate[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        y = np.array([np.mean(Heart_rate[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
 
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs6[i].scatter(x_value, y[j], color = 'r')
-            if j >= len(x)/2:
-                axs6[i].scatter(x_value, y[j], color = 'b')
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
 
-        axs6[i].set_ylabel("RPE")
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs6[i].scatter(x_red, y_red, color='r', label = "Fixed RPE")
+        axs6[i].scatter(x_blue, y_blue, color='b', label = "Fixed power")
+
+        axs6[i].set_ylabel("Avg HR [bpm]")
         axs6[i].set_xlabel("Power [W]")
 
         # Find the intercept and the r^2 value
@@ -437,6 +493,8 @@ if plots == "Yes":
         r_squared = r2_score(y, y_line)
         axs6[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
     
+    handles, labels = axs6[i].get_legend_handles_labels()
+    fig6.legend(handles, labels, loc='lower right')
     plt.tight_layout()
     plt.show()
 
@@ -456,17 +514,30 @@ if plots == "Yes":
         fig7.suptitle("Handcycle vs bicycle power")
         y = data_hc["Power"]
         x = data_bc["Power"]
-        axs7[i].scatter(x, y)
+
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
+
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs7[i].scatter(x_red, y_red, color='r', label = "Fixed RPE")
+        axs7[i].scatter(x_blue, y_blue, color='b', label = "Fixed power")
+
         axs7[i].set_ylabel("Power hc [W]")
         axs7[i].set_xlabel("Power bc [W]")
+
+        # Find the intercept
         slope, intercept = np.polyfit(x, y, 1) 
         y_line = slope * x + intercept 
-        axs7[i].plot(x, y_line, color='red') 
+        axs7[i].plot(x, y_line, color='green') 
         slopes[i, 6] = slope
         intercepts[i, 6] = intercept
         r_squared = r2_score(y, y_line)
         axs7[i].set_title(f"{ID}: r^2 = {r_squared:.2f}")
 
+    handles, labels = axs7[i].get_legend_handles_labels()
+    fig7.legend(handles, labels, loc='lower right')
     plt.tight_layout()
     plt.show()
 
@@ -483,46 +554,243 @@ if plots == "Yes":
         data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx")
         data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx")
 
-        fig8.suptitle("Handcycle vs bicycle power")
+        fig8.suptitle("Comparing RPE vs Power intercepts")
         power = data_hc["Power"]
         RPE = data_hc["RPE"]
-        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
-        x = np.array([np.mean(RPE[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        y = np.array([np.mean(RPE[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
 
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs6[i].scatter(x_value, y[j], color = 'r')
-            if j >= len(x)/2:
-                axs6[i].scatter(x_value, y[j], color = 'b')
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
 
-        axs8[i].set_ylabel("Power [W]")
-        axs8[i].set_xlabel("RPE")
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs8[i].scatter(x_red, y_red, color='r', label = "Fixed RPE hc")
+        axs8[i].scatter(x_blue, y_blue, color='y', label = "Fixed power hc")
+
+        axs8[i].set_xlabel("Power [W]")
+        axs8[i].set_ylabel("RPE")
 
         # Find the intercept and the r^2 value
         slope, intercept = np.polyfit(x, y, 1) 
         y_line = slope * x + intercept 
-        axs8[i].plot(x, y_line, color='red') 
+        axs8[i].plot(x, y_line, color='orange', label = "handcycle") 
 
         # Bicycle data
         power = data_bc["Power"]
         RPE = data_bc["RPE"]
-        y = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
-        x = np.array([np.mean(RPE[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        x = np.array([np.mean(power[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
+        y = np.array([np.mean(RPE[i * window_length : (i + 1) * window_length]) for i in range(n_windows)])
 
-        for j, x_value in enumerate(x):
-            if j < len(x)/2:
-                axs6[i].scatter(x_value, y[j], color = 'g')
-            if j >= len(x)/2:
-                axs6[i].scatter(x_value, y[j], color = 'k')
+        x_red = x[:len(x)//2]
+        y_red = y[:len(y)//2]
 
-        axs8[i].set_ylabel("Power [W]")
-        axs8[i].set_xlabel("RPE")
+        x_blue = x[len(x)//2:]
+        y_blue = y[len(y)//2:]
+
+        axs8[i].scatter(x_red, y_red, color='k', label = "Fixed RPE bc")
+        axs8[i].scatter(x_blue, y_blue, color='b', label = "Fixed power hc")
+
+        axs8[i].set_xlabel("Power [W]")
+        axs8[i].set_ylabel("RPE")
 
         # Find the intercept and the r^2 value
         slope, intercept = np.polyfit(x, y, 1) 
         y_line = slope * x + intercept 
-        axs8[i].plot(x, y_line, color='green') 
+        axs8[i].plot(x, y_line, color='green', label = "bicycle") 
         axs8[i].set_title(f"Participant {ID}")
+
+    handles, labels = axs8[i].get_legend_handles_labels()
+    fig8.legend(handles, labels, loc='lower right')
+    plt.tight_layout()
+    plt.show()
+
+if model_perc_hr == "Yes":
+    # Create P info columns
+    members = { "000":{"Age": 25, "Height": 160, "Weight": 58, "Gender": 1, "FTP": 49},
+                "002":{"Age": 26, "Height": 177, "Weight": 75, "Gender": 0, "FTP": 78},
+                "003":{"Age": 22, "Height": 180, "Weight": 70, "Gender": 0, "FTP": 51},
+                "004":{"Age": 22, "Height": 186, "Weight": 80, "Gender": 0, "FTP": 47},
+                "006":{"Age": 23, "Height": 174, "Weight": 87, "Gender": 1, "FTP": 51},
+                "007":{"Age": 23, "Height": 183, "Weight": 70, "Gender": 0, "FTP": 55},
+                "008":{"Age": 23, "Height": 190, "Weight": 82, "Gender": 0, "FTP": 82},
+                "009":{"Age": 32, "Height": 185, "Weight": 96, "Gender": 0, "FTP": 62},
+                "010":{"Age": 24, "Height": 160, "Weight": 56, "Gender": 1, "FTP": 48},
+                "011":{"Age": 28, "Height": 176, "Weight": 67, "Gender": 0, "FTP": 60},
+                "012":{"Age": 28, "Height": 184, "Weight": 70, "Gender": 0, "FTP": 87},
+                "013":{"Age": 25, "Height": 178, "Weight": 66, "Gender": 0, "FTP": 62},
+                "015":{"Age": 21, "Height": 176, "Weight": 73, "Gender": 0, "FTP": 60},
+                "016":{"Age": 24, "Height": 173, "Weight": 59, "Gender": 1, "FTP": 37},
+                }
+
+    fig1, axs1 = plt.subplots(4, 4)
+    axs1 = axs1.flatten()
+    fig2, axs2 = plt.subplots(4, 4)
+    axs2 = axs2.flatten()
+    fig3, axs3 = plt.subplots(4, 4)
+    axs3 = axs3.flatten()
+
+    slopes = np.zeros((len(participants), 2))
+    intercepts = np.zeros((len(participants), 2))
+    slopes_model = np.zeros((len(participants)))
+    intercepts_model = np.zeros((len(participants)))
+
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+
+        data_hc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_handcycle_{mode}.xlsx", engine="openpyxl")
+        data_bc = pd.read_excel(f"{path}\\Input to models\\Power output models\\{ID}_Input_bicycle_{mode}.xlsx", engine="openpyxl")
+
+            # Find coefficients describing real output
+        #-------------------------------------------------------------------------------------------------------------------------------------
+        # %HR vs Power: handcycle
+        data = data_hc
+        data = data.iloc[:int(len(data)/2), :]
+        x = data["Heart Rate"] / (220 - members[f"{ID}"]["Age"] - 20) * 100
+        y = data["Power"]
+        slopes[i, 0], intercepts[i, 0] = draw_plots.plot_graphs(x, y, "Handcycle: %HR vs Power",
+                                                                "% PeakHR", "Power[W]", participants[i], 
+                                                                i, fig1, axs1, color_coded = "No")
+
+        # %HR vs Power: bicycle
+        data = data_bc
+        x = data["Heart Rate"] / data["PeakHR"] * 100
+        y = data["Power"]
+        slopes[i, 1], intercepts[i, 1] = draw_plots.plot_graphs(x, y, "Bicycle: %HR vs Power", 
+                                                                 "% PeakHR", "Power[W]", participants[i],
+                                                                i, fig2, axs2, color_coded = "No")
+
+            # Predicting P_hc and P_bc
+        #--------------------------------------------------------------------------------------------------------------------------------------------
+        # Find coefficients which predict Pbc and Phc based on % Peak HR
+        perc_hr = np.linspace(50, 80, 100)
+        P_hc_pred = slopes[i, 0] * perc_hr + intercepts[i, 0]
+        P_bc_pred = slopes[i, 1] * perc_hr + intercepts[i, 1]
+
+        # Plot results and find regression line
+        slopes_model[i], intercepts_model[i] = draw_plots.plot_graphs(P_hc_pred, P_bc_pred, "Handcycle: predicted Power Outputs", 
+                               "Predicted hc [W]", "Predicted bc [W]", participants[i], # Labels for x and y axes
+                               i, fig3, axs3, color_coded = "No") # Plot properties
+        
+        
+    #--------------------------------------------------------------------------------------------------------------------------------------------------
+        # Plot coefficients and color code them 
+    #--------------------------------------------------------------------------------------------------------------------------------------------------
+    fig5, axs5 = plt.subplots(2, 3)
+    axs5 = axs5.flatten()
+
+    # Split into age groups
+    ages = [member["Age"] for member in members.values()]
+    heights = [member["Height"] for member in members.values()]
+    weights = [member["Weight"] for member in members.values()]
+    ages = [member["Age"] for member in members.values()]
+
+    bins_age = pd.cut(ages, 5)
+    bins_height = pd.cut(heights, 5)
+    bins_weight = pd.cut(weights, 5)
+
+
+    for i, ID in enumerate(participants):
+        if ID < 10:
+            ID = f"00{ID}"
+        else:
+            ID = f"0{ID}"
+        
+        # Color code by gender
+    #--------------------------------------------------------------------------------------------------------------------------------
+        if members[f"{ID}"]["Gender"] == 0:
+            c = 'b'
+        else:
+            c = 'r'
+        
+        axs5[0].scatter(intercepts_model[i], slopes_model[i], color = c)
+        axs5[0].legend(["Females", "Males"], loc = 'upper right')
+        axs5[0].set_title("Gender")
+
+            # Color code by age
+        #----------------------------------------------------------------------------------------------------------------------------------
+        bins = bins_age
+        if members[f"{ID}"]["Age"] in bins.categories[0]:
+            c = "yellow"
+        elif members[f"{ID}"]["Age"] in bins.categories[1]:
+            c = "orange"
+        elif members[f"{ID}"]["Age"] in bins.categories[2]:
+            c = "red"
+        elif members[f"{ID}"]["Age"] in bins.categories[3]:
+            c = "green"
+        elif members[f"{ID}"]["Age"] in bins.categories[4]:
+            c = "blue"
+        
+        axs5[1].scatter(intercepts_model[i], slopes_model[i], color=c)
+
+        # Add legend and figure details
+        legend_labels = [f"{math.ceil(bins.categories[0].left)}-{math.floor(bins.categories[0].right)}", 
+                         f"{math.ceil(bins.categories[1].left)}-{math.floor(bins.categories[1].right)}", 
+                         f"{math.ceil(bins.categories[2].left)}-{math.floor(bins.categories[2].right)}",
+                         f"{math.ceil(bins.categories[3].left)}-{math.floor(bins.categories[3].right)}",
+                         f"{math.ceil(bins.categories[4].left)}-{math.floor(bins.categories[4].right)}"]
+        legend_colors = ["yellow", "orange", "red", "green", "blue"]
+        legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
+        axs5[1].legend(legend_handles, legend_labels, loc='upper right')
+        axs5[1].set_title("Age")
+
+
+        # Color code by height
+    #-----------------------------------------------------------------------------------------------------------------------------------------
+        bins = bins_height
+        feature = "Height"
+
+        color_map = {
+            bins.categories[0]: "yellow",
+            bins.categories[1]: "orange",
+            bins.categories[2]: "red",
+            bins.categories[3]: "green",
+            bins.categories[4]: "blue"
+        }
+
+        category = next(bin for bin in bins.categories if members[f"{ID}"][f"{feature}"] in bin)
+        c = color_map[category]
+        
+        axs5[2].scatter(intercepts_model[i], slopes_model[i], color=c)
+
+        # Add legend and figure details
+        legend_labels = [f"{math.ceil(bins.categories[i].left)}-{math.floor(bins.categories[i].right)}" for i in range(5)]
+        legend_colors = ["yellow", "orange", "red", "green", "blue"]
+        legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
+        axs5[2].legend(legend_handles, legend_labels, loc='upper right')
+        axs5[2].set_title(f"{feature}")
+
+        # Color code by height
+    #-----------------------------------------------------------------------------------------------------------------------------------------
+        bins = bins_weight
+        feature = "Weight"
+        idx = 3
+        
+        color_map = {
+                bins.categories[0]: "yellow",
+            bins.categories[1]: "orange",
+            bins.categories[2]: "red",
+            bins.categories[3]: "green",
+            bins.categories[4]: "blue"
+        }
+    
+        category = next(bin for bin in bins.categories if members[f"{ID}"][f"{feature}"] in bin)
+        c = color_map[category]
+        
+        axs5[idx].scatter(intercepts_model[i], slopes_model[i], color=c)
+
+        # Add legend and figure details
+        legend_labels = [f"{math.ceil(bins.categories[i].left)}-{math.floor(bins.categories[i].right)}" for i in range(5)]
+        legend_colors = ["yellow", "orange", "red", "green", "blue"]
+        legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
+        axs5[idx].legend(legend_handles, legend_labels, loc='upper right')
+        axs5[idx].set_title(f"{feature}")
 
     plt.tight_layout()
     plt.show()
+            
+final = "Yake"
