@@ -22,11 +22,11 @@ class RPEModel():
         self.len_window = 180/n_windows
         self.participants = participants
 
-    def preprocessing(self, data_or):
+    '''def preprocessing(self, data_or):
         RPE_or = data_or.iloc[:, [5]]
         data = data_or.drop(columns = ["ID", "RPE"])
         
-        return data, RPE_or
+        return data, RPE_or'''
 
     def plot_results(y_test, y_test_fit, y_train, y_train_fit, r2_test, mse, rmse, r2_train, mse_train, rmse_train, CV_suffix = ""):
         # Create a figure with two subplots (2 row, 2 columns)
@@ -124,12 +124,12 @@ class RPEModel():
         
         y_test_fit      = model.predict(X_test)
         r2_test         = model.score(X_test, y_test)
-        mse             = round(np.mean(np.square(y_test - y_test_fit)), 2)
+        mse             = round(np.mean(np.square(y_test - y_test_fit.reshape(-1, 1))), 2)
         rmse            = round(np.sqrt(mse), 2)
     
         y_train_fit     = model.predict(X_train)
         r2_train        = model.score(X_train, y_train)
-        mse_train       = round(np.mean(np.square(y_train - y_train_fit)), 2)
+        mse_train       = round(np.mean(np.square(y_train - y_train_fit.reshape(-1, 1))), 2)
         rmse_train      = round(np.sqrt(mse_train), 2)
         test_results    = (y_test_fit, r2_test, mse, rmse)
         train_results   = (y_train_fit, r2_train, mse_train, rmse_train)
@@ -147,36 +147,22 @@ class RPEModel():
         RPE_predicted = np.zeros((len(participants), n_windows * 6))
         RPE_measured = np.zeros((len(participants), 6 * n_windows))
 
-        for i in range(len(participants)):
+        for i, ID in enumerate(participants):
         #-------------------------------------------------------------------------------------------------------------------------
             # Preprocessing
         #-------------------------------------------------------------------------------------------------------------------------
-            # Create the test participant for cross validation
-            test = np.zeros((n_windows * 6, data.shape[1]))
-            RPE_test = np.zeros((n_windows * 6, 1))
-            '''for j in range (6):
-                start = len(participants) * n_windows * j + i * n_windows 
-                test[n_windows * j : n_windows * (j + 1)] = data[start :  start + n_windows]
-                RPE_test[n_windows * j : n_windows * (j + 1)] = RPE_or.iloc[start :  start + n_windows]'''
-            for j in range(len(participants)):
-                test = pd.DataFrame(data[n_windows * j * 6 : n_windows * 6 * (j + 1)])
+            # Create the dataset and the test participant for cross validation
+            dataset = data.loc[data["ID"] != ID]
+            RPE = RPE_or.loc[RPE_or["ID"] != ID]
 
-            # Check if test set was extracted correctly
-            '''if n_windows == 3 and i == 5:
-                print(f"For participant {participants[i]} test set is: {test}")
-                print(test)'''
-            
-            # Remove the test participant
-            '''for j in range(n_windows):  
-                index = [(len(participants) * n_windows) * k for k in [0, 1, 2, 3, 4, 5]]
-                index = [x + (j + i * n_windows) for x in index]
-                if j == 0:
-                    dataset = data.drop(index)
-                    RPE = RPE_or.drop(index)
-                else:
-                    dataset = dataset.drop(index)
-                    RPE = RPE.drop(index)'''
-            
+            test = data.loc[data["ID"] == ID]
+            RPE_test = RPE_or.loc[RPE_or["ID"] == ID]
+
+            # Remove the ID column
+            dataset = dataset.drop(columns = ["ID"]).reset_index(drop = "True")
+            test = test.drop(columns = ["ID"]).reset_index(drop = "True")
+            RPE = RPE.drop(columns = ["ID"]).reset_index(drop = "True")
+            RPE_test = RPE_test.drop(columns = ["ID"]).reset_index().drop(columns = ["index"])
 
             # Shuffle the dataset
             dataset, RPE = shuffle(dataset, RPE, random_state = None)
@@ -200,9 +186,6 @@ class RPEModel():
                 coeff = np.zeros((len(participants) * n_windows, dataset.shape[1]))
             coeff[i, :] = X
             predicted = linear_regression.predict(test)
-            # Visualize the intercept to the data
-
-            # predicted = np.round(predicted)
 
             # Save predicted and actual value for comparison
             RPE_predicted[i, :] = predicted.T
@@ -316,13 +299,13 @@ class RPEModel():
     
 
     # Visualize results as a curve
-    def visualize_results_plot(self, RPE_measured, RPE_predicted, n_windows, fig, axs, handle1, handle2):
+    def visualize_results_plot(self, RPE_measured, RPE_predicted, n_windows, fig, axs, i):
         x_axis = np.linspace(0, n_windows * 6 - 1, len(RPE_measured))
 
-        axs[handle1, handle2].scatter(x_axis, RPE_measured, color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
-        axs[handle1, handle2].scatter(x_axis, RPE_predicted, color = (0, 0, 1), marker = 'o', s = 20, label = "Predicted values")
+        axs[i].scatter(x_axis, RPE_measured, color = (1, 0, 0), marker = 'x', s = 20, label = "Reported values")
+        axs[i].scatter(x_axis, RPE_predicted, color = (0, 0, 1), marker = 'o', s = 20, label = "Predicted values")
         
-        handles, labels = axs[handle1, handle2].get_legend_handles_labels()
+        handles, labels = axs[i].get_legend_handles_labels()
         fig.legend(handles, labels, loc = 'lower right', fontsize = 10)
 
         fig.tight_layout()
@@ -420,11 +403,14 @@ class VisualizeResults():
             # Sort features by their percentage contribution in descending order
             sorted_indices = np.argsort(percentage[:, i])[::-1]
             top_indices = sorted_indices[:top_n]
+            print(f"Feature contribution for PC{i + 1}")
             
             # Print the top contributing features for this PC
             #  print(f"\nTop {top_n} contributing {category_name} features for PC{i+1}:")
             for idx in top_indices:
                 print(f"Feature: {features[idx]}, Contribution: {percentage[idx, i]:.1f}%")
+            
+            print("\n")
 
     def plot_feature_importance_long(self, pca, feature_labels, win_length, n_pcs:int):
         """ https://stackoverflow.com/questions/67199869/measure-of-feature-importance-in-pca?rq=1"""
