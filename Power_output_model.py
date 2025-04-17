@@ -4,16 +4,14 @@ import numpy as np
 from matplotlib.lines import Line2D
 import math
 # Linear regression for predicting coefficients
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
-from sklearn.pipeline import make_pipeline
+from scipy.stats import spearmanr, pearsonr
 
-
-participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16]
+participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 19, 20]
 path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
 mode = "raw"
 plot_hr = "No"
-simple_model = "Yes"
+simple_model = "No"
 
 class Plots():
     def __init__(self):
@@ -76,13 +74,20 @@ members = { "000":{"Age": 25, "Height": 160, "Weight": 58, "Gender": 1, "FTP": 4
         "013":{"Age": 25, "Height": 178, "Weight": 66, "Gender": 0, "FTP": 62, "RPE": [[10, 11, 13], [11, 11, 13]],"Activity": [1*60, 1*60, 3*35]},
         "015":{"Age": 21, "Height": 176, "Weight": 73, "Gender": 0, "FTP": 60, "RPE": [[9, 10, 11], [10, 11, 13]],"Activity": [4*80, 6*2*60, 7*8*60]},
         "016":{"Age": 24, "Height": 173, "Weight": 59, "Gender": 1, "FTP": 37, "RPE": [[9, 10, 11], [7, 9, 10]],"Activity": [2*45, 2*30, 7*60]},
+        "017":{"Age": 24, "Height": 187, "Weight": 75, "Gender": 0, "FTP": 58, "RPE": [[8, 8, 8], [8, 8, 11]], "Activity": [0, 0, 4*60, 13*60*7]},
+        "019":{"Age": 24, "Height": 175, "Weight": 68, "Gender": 0, "FTP": 73, "RPE": [[8, 9, 9], [10, 9, 10]], "Activity": [4*120, 0, 7*60, 5*60*7]},
+        "020":{"Age": 25, "Height": 174, "Weight": 73, "Gender": 0, "FTP": 88, "RPE": [[10, 11, 14], [9, 12, 14]], "Activity": [2*90, 0, 7*30, 8*60*7]},
         }
 
-fig1, axs1 = plt.subplots(4, 4)
+n_col = 5
+n_rows = 4
+hpad = 1
+
+fig1, axs1 = plt.subplots(n_col, n_rows, constrained_layout = "True")
 axs1 = axs1.flatten()
-fig2, axs2 = plt.subplots(4, 4)
+fig2, axs2 = plt.subplots(n_col, n_rows, constrained_layout = "True")
 axs2 = axs2.flatten()
-fig3, axs3 = plt.subplots(4, 4)
+fig3, axs3 = plt.subplots(n_col, n_rows, constrained_layout = "True")
 axs3 = axs3.flatten()
 
 slopes = np.zeros((len(participants), 2))
@@ -140,7 +145,7 @@ for i, ID in enumerate(participants):
 #--------------------------------------------------------------------------------------------------------------------------------------------------
     # Plot coefficients and color code them 
 #--------------------------------------------------------------------------------------------------------------------------------------------------
-fig5, axs5 = plt.subplots(2, 3)
+fig5, axs5 = plt.subplots(2, 3, constrained_layout = "True")
 axs5 = axs5.flatten()
 
 # Split into age groups
@@ -288,13 +293,8 @@ for i, ID in enumerate(participants):
     axs5[idx].set_ylabel("Alpha")
  
 
-fig1.tight_layout()
-fig2.tight_layout()
-fig3.tight_layout()
-fig5.tight_layout()
-
 if plot_hr == "Yes":
-    fig6, axs6 = plt.subplots(4, 4)
+    fig6, axs6 = plt.subplots(n_col, n_rows, constrained_layout = "True")
     axs6 = axs6.flatten()
     for i, ID in enumerate(participants):
         if ID < 10:
@@ -319,7 +319,6 @@ if plot_hr == "Yes":
     handles, labels = axs6[i].get_legend_handles_labels()
     fig6.legend(handles, labels, loc='lower right')
     fig6.suptitle("Heart rate trend")
-    fig6.tight_layout()
 
 #-------------------------------------------------------------------------------------------------------------------------------
     # Test coefficients
@@ -367,12 +366,11 @@ test_model = TestModel()
 slopes_model = slopes_model.reshape(-1, 1)
 intercepts_model = intercepts_model.reshape(-1, 1)
 
-fig7, axs7 = plt.subplots(4, 4)
+fig7, axs7 = plt.subplots(n_col, n_rows, constrained_layout = "True")
 axs7 = axs7.flatten()
 coef_orig = np.concatenate([slopes_model, intercepts_model], axis = 1)
 test_model.plot_graph(coef_orig, fig7, axs7)
 fig7.suptitle("Tweaked Power output")
-fig7.tight_layout()
 
 #--------------------------------------------------------------------------------------------------------------------------------------------
     # Multioutput regression (Same results as computing slopes and intercept separately)
@@ -384,10 +382,10 @@ for i, ID in enumerate(participants):
     ID = f"{ID:03}"
 
     training = [
-    [sub_dict[key] for key in ["Age", "Height", "Weight", "Gender"] if key in sub_dict]
+    [sub_dict[key] for key in ["Age", "Height", "Weight", "Gender", "FTP"] if key in sub_dict]
     for key, sub_dict in members.items() if key != ID]
     test = [
-    [sub_dict[key] for key in ["Age", "Height", "Weight", "Gender"] if key in sub_dict]
+    [sub_dict[key] for key in ["Age", "Height", "Weight", "Gender", "FTP"] if key in sub_dict]
     for key, sub_dict in members.items() if key == ID]
 
     Y_train = np.delete(np.concatenate([slopes_model, intercepts_model], axis = 1), i, axis = 0)
@@ -410,15 +408,16 @@ for i, ID in enumerate(participants):
     
    # Test the predicted coefficients
 #----------------------------------------------------------------------------------------------------------------------------------------------------
-fig9, axs9 = plt.subplots(4, 4)
+fig9, axs9 = plt.subplots(n_col, n_rows, constrained_layout = "True")
 axs9 = axs9.flatten()
 test_model.plot_graph(coef_predicted, fig9, axs9)
 fig9.suptitle("Linear model: tweaked Power output")
 
     # Compare Original model and Linear Model
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
-fig10, axs10 = plt.subplots(4, 4)
+fig10, axs10 = plt.subplots(n_col, n_rows, constrained_layout = "True")
 axs10 = axs10.flatten()
+
 
 for i, ID in enumerate(participants):
     ID = f"{ID:03}"
@@ -446,12 +445,68 @@ for i, ID in enumerate(participants):
     
     legend_labels = ["Linear regression", "Original coefficients"]
     fig10.legend(legend_handles, legend_labels, loc='lower right')
+    plt.title("Original coefficients vs predicted coefficients")
 
-plt.show()
+# plt.show()
     
-    
+
+#-------------------------------------------------------------------------------------------------------------------------------------
+    # Look for a correlation
+#-------------------------------------------------------------------------------------------------------------------------------------
+age = np.zeros((len(participants)))
+gender = np.zeros((len(participants)))
+height = np.zeros((len(participants)))
+weight = np.zeros((len(participants)))
+IPAQ = np.zeros((len(participants)))
+for i, ID in enumerate(participants):
+    ID = f"{ID:03}"
+    age[i] = members[f"{ID}"]["Age"]
+    gender[i] = members[f"{ID}"]["Gender"]
+    height[i] = members[f"{ID}"]["Height"]
+    weight[i] = members[f"{ID}"]["Weight"]
+    IPAQ[i] = 3.3 * members[f"{ID}"]["Activity"][2] + 4 * members[f"{ID}"]["Activity"][1] + 8 * members[f"{ID}"]["Activity"][0]
+
+p = np.zeros((5, 2))
+r = np.zeros((5, 2))
+feature_labels = ["Age", "Gender", "Height", "Weight", "IPAQ"]
+
+r[0, 0], p[0, 0] = pearsonr(age, coef_orig[:, 0])
+r[1, 0], p[1, 0] = pearsonr(gender, coef_orig[:, 0])
+r[2, 0], p[2, 0] = pearsonr(height, coef_orig[:, 0])
+r[3, 0], p[3, 0] = pearsonr(weight, coef_orig[:, 0])
+r[4, 0], p[4, 0] = pearsonr(IPAQ, coef_orig[:, 0])
+r[0, 1], p[0, 1] = pearsonr(age, coef_orig[:, 1])
+r[1, 1], p[1, 1] = pearsonr(gender, coef_orig[:, 1])
+r[2, 1], p[2, 1] = pearsonr(height, coef_orig[:, 1])
+r[3, 1], p[3, 1] = pearsonr(weight, coef_orig[:, 1])
+r[4, 1], p[4, 1] = pearsonr(IPAQ, coef_orig[:, 1])
+
+fig12, axs12 = plt.subplots(1, 2)
+im1 = axs12[1].imshow(p, cmap='Blues', origin='upper', aspect='auto')
+for i in range(p.shape[0]):
+    for j in range(p.shape[1]):
+        text = axs12[1].text(j, i, f"{p[i, j]:.2f}", ha="center", va="center", color="k", size='smaller')
+            
+axs12[1].set_xticks(np.arange(coef_orig.shape[1]), labels=["Alpha", "Beta"])
+axs12[1].set_yticks(np.arange(5), labels = feature_labels)
+axs12[1].xaxis.tick_top()
+axs12[1].set_title("p value")
+
+im2 = axs12[0].imshow(r, cmap='Blues', origin='upper', aspect='auto')
+for i in range(r.shape[0]):
+    for j in range(r.shape[1]):
+        text = axs12[0].text(j, i, f"{r[i, j]:.2f}", ha="center", va="center", color="k", size='smaller')
+            
+axs12[0].set_xticks(np.arange(coef_orig.shape[1]), labels=["Alpha", "Beta"])
+axs12[0].set_yticks(np.arange(5), labels = feature_labels)
+axs12[0].xaxis.tick_top()
+axs12[0].set_title("r coefficient")
+
+fig12.suptitle(f'Correlation between features and coefficients - Pearson')
+
+
 if simple_model == "Yes":
-    fig11, axs11 = plt.subplots(4, 4)
+    fig11, axs11 = plt.subplots(n_col, n_rows)
     axs11 = axs11.flatten()
 
     for i, ID in enumerate(participants):
@@ -487,14 +542,18 @@ if simple_model == "Yes":
         legend_handles = [Line2D([0], [0], marker='.', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
         fig11.legend(legend_handles, legend_labels, loc='lower right')
 
-    fig11.tight_layout()
     fig11.suptitle("Simple model")
 
-
-
-
-
+final = "Ne yake"
     
-
-
+    
+'''plt.figure()
+feature = height
+for i in enumerate(participants):
+    values, y = np.unique(feature, return_counts=True)
+plt.plot(values, y)
+plt.axvline(np.mean(feature), color='red', linestyle='--', linewidth=2, label=f'Media = {np.mean(feature):.2f}')
+plt.xlabel("Height")
+plt.ylabel("recurrence")
+'''
 
