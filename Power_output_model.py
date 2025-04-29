@@ -141,7 +141,7 @@ for i, ID in enumerate(participants):
                             i, fig3, axs3, color_coded = "No") # Plot properties
     axs3[i].set_xlim([0, 100])
     axs3[i].set_ylim([50, 250])
-    
+
 #--------------------------------------------------------------------------------------------------------------------------------------------------
     # Plot coefficients and color code them 
 #--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -511,7 +511,7 @@ if simple_model == "Yes":
 
     for i, ID in enumerate(participants):
         alpha = 0
-        ID = ID = f"{ID:03}"
+        ID = f"{ID:03}"
 
         # Import data
         data_hc = pd.read_excel(f"{path}\\Input to models\\Power Output models\\{ID}_Input_handcycle_{mode}.xlsx", usecols = ["Power", "RPE"])
@@ -544,8 +544,6 @@ if simple_model == "Yes":
 
     fig11.suptitle("Simple model")
 
-final = "Ne yake"
-    
     
 '''plt.figure()
 feature = height
@@ -557,3 +555,71 @@ plt.xlabel("Height")
 plt.ylabel("recurrence")
 '''
 
+
+#-------------------------------------------------------------------------------------------------------------------------
+    # Evaluating the error
+#-------------------------------------------------------------------------------------------------------------------------
+    # Plot the error as a function of time and difference between RPE values
+#------------------,--------------------------------------------------------------------------------------------------------------------------------
+fig12, axs12 = plt.subplots(n_rows, n_col)
+axs12 = axs12.flatten()
+fig13, axs13 = plt.subplots(1)
+
+# Define the color coding
+color_map = {
+    0: (1, 1, 0), # Yellow
+    1: (1, 165/255, 0), # Orange
+    2: "r",
+    3: "g",
+}
+
+for i, ID in enumerate(participants):  
+    ID = f"{ID:03}" 
+    data_hc = pd.read_excel(f"{path}\\Input to models\\Power Output models\\{ID}_Input_handcycle_{mode}.xlsx", usecols = ["Power"]) 
+    data_bc = pd.read_excel(f"{path}\\Input to models\\Power Output models\\{ID}_Input_bicycle_{mode}.xlsx", usecols = ["Power"])
+
+    RPE = members[f"{ID}"]["RPE"]
+    RPE_diff = abs(np.array(members[f"{ID}"]["RPE"][0]) - np.array(members[f"{ID}"]["RPE"][1]))
+
+    Power_hc = data_hc * slopes_model[i] + intercepts_model[i]
+    x = np.array(data_bc).flatten() - np.array(Power_hc).flatten()
+
+    for j in range(3, 6):
+        start = j * 180 
+        final = (j + 1) * 180 
+
+        c = color_map.get(RPE_diff[j - 3], "k")
+
+        t = np.linspace(start, final, 180)
+        axs12[i].plot(t, x[start:final], color = c)
+        # Single figure
+        axs13.plot(t, x[start:final], color = c)
+
+    age = members[f"{ID}"]["Age"]
+    height = members[f"{ID}"]["Height"]
+    weight = members[f"{ID}"]["Weight"]
+    IPAQ_score = 3.3 * members[f"{ID}"]["Activity"][2] + 4 * members[f"{ID}"]["Activity"][1] + 8 * members[f"{ID}"]["Activity"][0]
+    if IPAQ_score <= 600:
+        IPAQ = "Low"
+    elif IPAQ_score > 600 and ipaq <= 1500:
+        IPAQ = "Medium"
+    elif IPAQ_score > 1500:
+        IPAQ = "High"
+
+    axs12[i].set_ylim([-50, 50])
+    axs12[i].set_xlabel("Time [s]")
+    axs12[i].set_ylabel("Error [W]")
+    axs12[i].set_title(f"{ID}, A: {age}, H: {height},\n W: {weight}, IPAQ: {IPAQ}")
+    axs13.set_xlabel("Time [s]")
+    axs13.set_ylabel("Error [W]")
+
+
+legend_handles = [Line2D([0], [0], marker='o', color='w', label=str(key), markerfacecolor=color_map[key], markersize=10)
+    for key in sorted(color_map.keys())
+]
+fig12.legend(handles = legend_handles, title = "Difference in RPE", loc = "lower right")
+fig13.legend(handles = legend_handles, title = "Difference in RPE", loc = "lower right")
+fig12.suptitle("Error - %HR Model")
+
+
+plt.show()
