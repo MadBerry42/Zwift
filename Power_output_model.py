@@ -6,12 +6,14 @@ import math
 # Linear regression for predicting coefficients
 from sklearn.linear_model import LinearRegression
 from scipy.stats import spearmanr, pearsonr
+from sklearn.metrics import r2_score
 
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 19, 20]
-path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
+# path = f"C:\\Users\\maddy\\Desktop\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
+path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
 mode = "raw"
 plot_hr = "No"
-simple_model = "No"
+simple_model = "Yes"
 
 class Plots():
     def __init__(self):
@@ -510,7 +512,6 @@ if simple_model == "Yes":
     axs11 = axs11.flatten()
 
     for i, ID in enumerate(participants):
-        alpha = 0
         ID = f"{ID:03}"
 
         # Import data
@@ -521,28 +522,58 @@ if simple_model == "Yes":
         data_bc_RPE = data_bc.iloc[:int(len(data_hc)/2)] # Blocks at constant RPE target
         data_bc_power = data_bc.iloc[int(len(data_hc)/2):] # Blocks at constant power target
 
-        alpha = alpha + np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 12, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 12, :])
-        alpha = alpha + np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 14, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 14, :])
-        alpha = alpha + np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 15, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 15, :])
+        # Find coefficient gamma
+        gamma1 = np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 12, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 12, :])
+        gamma2 = np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 14, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 14, :])
+        gamma3 = np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 15, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 15, :])
 
-        alpha = alpha / 3
+        # Find relationship between P info, gamma and RPE
+        IPAQ = 3.3 * members[f"{ID}"]["Activity"][2] + 4 * members[f"{ID}"]["Activity"][1] + 8 * members[f"{ID}"]["Activity"][0]
+        training = [[members[f"{ID}"]["Age"], members[f"{ID}"]["Weight"], members[f"{ID}"]["Height"], members[f"{ID}"]["Gender"], IPAQ, 12],
+                    [members[f"{ID}"]["Age"], members[f"{ID}"]["Weight"], members[f"{ID}"]["Height"], members[f"{ID}"]["Gender"], IPAQ, 14],
+                    [members[f"{ID}"]["Age"], members[f"{ID}"]["Weight"], members[f"{ID}"]["Height"], members[f"{ID}"]["Gender"], IPAQ, 15],
+                    ]
+        Y_train = [gamma1, gamma2, gamma3]
+        linear_regression = LinearRegression().fit(training, Y_train)
+        
+        # Find predicted output
+        power_hc = data_hc_power["Power"]
+        tweaked_power = np.zeros(180 * 3)
+        for j in range(3):
+            start = j * 180
+            final = (j + 1) * 180
+            test = np.array([members[f"{ID}"]["Age"], members[f"{ID}"]["Weight"], members[f"{ID}"]["Height"], members[f"{ID}"]["Gender"], IPAQ, members[f"{ID}"]["RPE"][0][j]])
+            test = test.reshape(1, -1)
+            gamma_star = linear_regression.predict(test)
+            Predicted_output = gamma_star * power_hc[start : final]
+            t = np.linspace(start + 540, final + 540, 180)
+            axs11[i].plot(t, Predicted_output, color = "orange")
+            tweaked_power[start : final] = Predicted_output
 
-        Predicted_output = alpha * data_hc_power["Power"]
+        # Plot the tweaked power in the fixed RPE portion in green
+        power_hc = data_hc_RPE["Power"]
+        t = np.linspace(0, 179, 180)
+        axs11[i].plot(t, power_hc[0 : 180] * gamma1, color = "green")
+        t = np.linspace(180, 359, 180)
+        axs11[i].plot(t, power_hc[180 : 360] * gamma2, color = "green")
+        t = np.linspace(360, 539, 180)
+        axs11[i].plot(t, power_hc[360 : 540] * gamma3, color = "green")
 
-        axs11[i].plot(data_bc_power["Power"])
-        axs11[i].plot(Predicted_output)
-
+        # Plot the original bicycle signal
+        axs11[i].plot(data_bc["Power"], color = "blue")
         axs11[i].set_xlabel("Time [s]")
         axs11[i].set_ylabel("Power [W]")
 
-
-        axs11[i].set_title(f"{ID}: alpha = {alpha:.2f}")
+        # Compute r_squared and set the value in the title
+        r_squared =r2_score(data_bc_power["Power"], tweaked_power)
+        axs11[i].set_title(f"{ID}: r^2 = {r_squared:.3}")
+        # axs11[i].set_title(f"{ID}: alpha = {alpha:.2f}")
         legend_labels = ["Original bicycle", "Predicted value"]
         legend_colors = ["Blue", "Orange"]
         legend_handles = [Line2D([0], [0], marker='.', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
         fig11.legend(legend_handles, legend_labels, loc='lower right')
 
-    fig11.suptitle("Simple model")
+    fig11.suptitle("Ratio of powers")
 
     
 '''plt.figure()
