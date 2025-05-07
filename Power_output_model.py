@@ -9,8 +9,8 @@ from scipy.stats import spearmanr, pearsonr
 from sklearn.metrics import r2_score
 
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 19, 20]
-# path = f"C:\\Users\\maddy\\Desktop\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
-path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
+path = f"C:\\Users\\maddy\\Desktop\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
+# path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
 mode = "raw"
 plot_hr = "No"
 simple_model = "Yes"
@@ -506,10 +506,18 @@ axs12[0].set_title("r coefficient")
 
 fig12.suptitle(f'Correlation between features and coefficients - Pearson')
 
-
+#--------------------------------------------------------------------------------------------------------------------------------------
+    # Simple model
+#--------------------------------------------------------------------------------------------------------------------------------------
+gamma_matrix = np.zeros((len(participants), 5)) # Matrix containing the three values of gamma anf the r_squared values for each participant, both for test and train
+linear_regression_matrix = np.concatenate((slopes_model, intercepts_model, np.zeros((len(participants), 1))), axis = 1) # Matrix containing slopes and intercept for each participant and r_squared value
 if simple_model == "Yes":
-    fig11, axs11 = plt.subplots(n_col, n_rows)
+    # Simple model only
+    fig11, axs11 = plt.subplots(n_rows, n_col)
     axs11 = axs11.flatten()
+    # Comparison of simple model and linear regression model
+    fig13, axs13 = plt.subplots(n_rows, n_col)
+    axs13 = axs13.flatten()
 
     for i, ID in enumerate(participants):
         ID = f"{ID:03}"
@@ -527,6 +535,11 @@ if simple_model == "Yes":
         gamma2 = np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 14, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 14, :])
         gamma3 = np.mean(data_bc_RPE.loc[data_bc_RPE["RPE"] == 15, :])/np.mean(data_hc_RPE.loc[data_hc_RPE["RPE"] == 15, :])
 
+        # Save coefficients inside of a matrix
+        gamma_matrix[i, 0] = gamma1
+        gamma_matrix[i, 1] = gamma2
+        gamma_matrix[i, 2] = gamma3
+        
         # Find relationship between P info, gamma and RPE
         IPAQ = 3.3 * members[f"{ID}"]["Activity"][2] + 4 * members[f"{ID}"]["Activity"][1] + 8 * members[f"{ID}"]["Activity"][0]
         training = [[members[f"{ID}"]["Age"], members[f"{ID}"]["Weight"], members[f"{ID}"]["Height"], members[f"{ID}"]["Gender"], IPAQ, 12],
@@ -552,12 +565,16 @@ if simple_model == "Yes":
 
         # Plot the tweaked power in the fixed RPE portion in green
         power_hc = data_hc_RPE["Power"]
+        tweaked_train = np.zeros((180 * 3))
         t = np.linspace(0, 179, 180)
         axs11[i].plot(t, power_hc[0 : 180] * gamma1, color = "green")
+        tweaked_train[0 : 180] = power_hc[0 : 180] * gamma1
         t = np.linspace(180, 359, 180)
         axs11[i].plot(t, power_hc[180 : 360] * gamma2, color = "green")
+        tweaked_train[180 : 360] = power_hc[180 : 360] * gamma2
         t = np.linspace(360, 539, 180)
         axs11[i].plot(t, power_hc[360 : 540] * gamma3, color = "green")
+        tweaked_train[360 : 540] = power_hc[360 : 540] * gamma3
 
         # Plot the original bicycle signal
         axs11[i].plot(data_bc["Power"], color = "blue")
@@ -565,15 +582,53 @@ if simple_model == "Yes":
         axs11[i].set_ylabel("Power [W]")
 
         # Compute r_squared and set the value in the title
-        r_squared =r2_score(data_bc_power["Power"], tweaked_power)
-        axs11[i].set_title(f"{ID}: r^2 = {r_squared:.3}")
-        # axs11[i].set_title(f"{ID}: alpha = {alpha:.2f}")
-        legend_labels = ["Original bicycle", "Predicted value"]
-        legend_colors = ["Blue", "Orange"]
+        r_squared_test = r2_score(tweaked_power, data_bc_power["Power"])
+        r_squared_train = r2_score(tweaked_train, data_bc_RPE["Power"])
+
+        gamma_matrix[i, 3] = r_squared_test
+        gamma_matrix[i, 4] = r_squared_train
+
+        axs11[i].set_title(f"{ID}: r^2 train = {r_squared_test:.2}\n r^2 test = {r_squared_train:.2}", size = 8)
+        legend_labels = ["Original bicycle", "Predicted value test", "Predicted value train"]
+        legend_colors = ["Blue", "Orange", "Green"]
         legend_handles = [Line2D([0], [0], marker='.', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
         fig11.legend(legend_handles, legend_labels, loc='lower right')
+    
+        # Plot the two models for comparison
+        axs13[i].plot(data_bc["Power"], color = "blue")
+        t = np.linspace(0, 539, 540)
+        axs13[i].scatter(t, tweaked_train, color = "green", marker = "*", s = 10)
+        t = np.linspace(540, 1079, 540)
+        axs13[i].scatter(t, tweaked_power, color = "green", marker = "*", s = 10)
 
+        # Linear regression model
+        power_lr = data_hc["Power"] * slopes_model[i] + intercepts_model[i]
+        linear_regression_matrix[i, 2] = r2_score(data_bc_power["Power"], power_lr[540 : 1080])
+        t = np.linspace(0, 1080, 1080)
+        axs13[i].scatter(t, power_lr, color = "red", marker = "o", s = 10)
+        
+        # Figure details
+        axs13[i].set_title(f"{ID}: r^2 lr = {linear_regression_matrix[i, 2]:.2}\n r^2 simple = {r_squared_test:.2}", size = 8)
+        legend_labels = ["Original bicycle", "Linear regression", "Simple Model"]
+        legend_colors = ["Blue", "Green", "Red"]
+        legend_handles = [Line2D([0], [0], marker='.', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
+        fig13.legend(legend_handles, legend_labels, loc='lower right')
+    
     fig11.suptitle("Ratio of powers")
+    fig13.suptitle("Model comparison")
+
+# Create Excel file containing coefficient for each participants
+df = pd.DataFrame.from_dict(members, orient="index").reset_index().rename(columns={"index": "ID"})
+ids = df["ID"].values.reshape(-1, 1)
+
+df = pd.DataFrame(np.concatenate((ids, linear_regression_matrix, gamma_matrix), axis = 1))
+df.columns = ["ID", "slope", "intercept", "r^2 test lr", "gamma1", "gamma2", "gamma3", "r^2 train", "r^2 test"]
+
+writer = pd.ExcelWriter(f'{path}\\{ID}_input_file.xlsx', engine = "openpyxl")
+wb = writer.book
+df.to_excel(writer, index = False)
+wb.save(f'{path}\\Participant_coefficients.xlsx')
+print(f'File has been successfully saved in {path}!')
 
     
 '''plt.figure()
@@ -591,7 +646,7 @@ plt.ylabel("recurrence")
     # Evaluating the error
 #-------------------------------------------------------------------------------------------------------------------------
     # Plot the error as a function of time and difference between RPE values
-#------------------,--------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------------------------
 fig12, axs12 = plt.subplots(n_rows, n_col)
 axs12 = axs12.flatten()
 fig13, axs13 = plt.subplots(1)
@@ -652,5 +707,8 @@ fig12.legend(handles = legend_handles, title = "Difference in RPE", loc = "lower
 fig13.legend(handles = legend_handles, title = "Difference in RPE", loc = "lower right")
 fig12.suptitle("Error - %HR Model")
 
-
 plt.show()
+
+#----------------------------------------------------------------------------------------------------------------------------------------------
+    # Testing the model: applying them to Sunniva's data
+#----------------------------------------------------------------------------------------------------------------------------------------------
