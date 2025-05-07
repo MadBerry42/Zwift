@@ -26,9 +26,8 @@ members = { "000":{"Age": 25, "Height": 160, "Weight": 58, "Gender": 1, "FTP": 4
         "020":{"Age": 25, "Height": 174, "Weight": 73, "Gender": 0, "FTP": 88, "RPE": [[10, 11, 14], [9, 12, 14]], "Activity": [2*90, 0, 7*30, 8*60*7]},
         }
 
-participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17]
+participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 19, 20]
 for i, ID in enumerate(participants):
-    # ID = int(input("What is participant's ID?"))
     ID = f"{ID:03}"
     Gender = members[f"{ID}"]["Gender"]
     Age = members[f"{ID}"]["Age"]
@@ -36,10 +35,11 @@ for i, ID in enumerate(participants):
     Weight = members[f"{ID}"]["Weight"]
     max_HR = 220 - Age
 
-    path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
+    # path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
+    path = "C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
 
     # Filter details
-    window_size = 15
+    window_size = 30
 
     #-----------------------------------------------------------------------------------------------------------------------------------------
     # Handcycle
@@ -125,13 +125,14 @@ for i, ID in enumerate(participants):
         writer.writerows(rows)'''
 
     # Create an excel file
-    path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data\Input to models\RPE Model single"
+    # path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data\Input to models\RPE Model single"
+    path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data\\Input to models\\Power output models"
     Col_A = [' ', 'Gender', 'Age', 'Weight', 'Height']
     Col_B = [' ', Gender, Age, Weight, Height]
     Col_A.extend([' '] * (len(power_hc) - len(Col_A)))
     Col_B.extend([' '] * (len(power_hc) - len(Col_B)))
 
-    writer = pd.ExcelWriter(f'{path}\\{ID}_input_file.xlsx', engine = "openpyxl")
+    writer = pd.ExcelWriter(f'{path}\\{ID}_input_file_filtered.xlsx', engine = "openpyxl")
     wb = writer.book
     df = pd.DataFrame({'P info': Col_A, ' ' : Col_B, 'Heart Rate': HR, 'RPE': RPE, 'Cadence': cadence, 'Power hc': power_hc, 'Power bc': data_filtered_bc})
     '''features_hr = pd.DataFrame([features_hr])
@@ -139,7 +140,7 @@ for i, ID in enumerate(participants):
     df = df.fillna(' ')'''
 
     df.to_excel(writer, index = False)
-    wb.save(f'{path}\\{ID}_input_file.xlsx')
+    wb.save(f'{path}\\{ID}_input_file_filtered.xlsx')
 
     # If you ever only want to save power in your .csv file
     '''csv_file = os.path.join(directory, f"{ID}_filtered_power")
@@ -149,4 +150,6 @@ for i, ID in enumerate(participants):
         rows = zip(Age, Weight, Height, data_filtered, HR, max_HR, RPE, data_filtered_bc)
         writer.writerows(rows)'''
 
-    print(f"File for participant {ID} has been succesfully saved!")
+    print(f"File for participant {ID} has been succesfully saved in {path}!")
+
+plt.show()
