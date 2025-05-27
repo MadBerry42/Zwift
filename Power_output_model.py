@@ -351,8 +351,37 @@ print("File has been succesfully saved!")'''
 #-------------------------------------------------------------------------------------------------------------------------------------------------------
     # Observe the derivatives of the signal
 #-------------------------------------------------------------------------------------------------------------------------------------------------------
-fig, axs = plt.subplots(n_rows, n_cols)
-axs = axs.flatten()
+win_length = 100
+order_pol = 4
 
-# First derivative
-power_bc_sg = savgol_filter(power_bc, 15, 3, deriv = 1)
+for j in range(2):
+    fig, axs = plt.subplots(n_rows, n_cols)
+    axs = axs.flatten()
+    for i, ID in enumerate(participants):
+        ID = f"{ID:03}"
+        power_hc = pd.read_excel(f"{path}\\Input to models\\Power Output models\\{ID}_Input_handcycle_raw.xlsx", usecols = ["Power"])
+        power_bc = pd.read_excel(f"{path}\\Input to models\\Power Output models\\{ID}_Input_bicycle_raw.xlsx", usecols = ["Power"]) 
+
+        der_hc = savgol_filter(np.array(power_hc).flatten(), win_length, order_pol, deriv = j + 1)
+        der_bc = savgol_filter(np.array(power_bc).flatten(), win_length, order_pol, deriv = j + 1)
+        t = np.linspace(0, 1079, 1080)
+
+        axs[i].plot(t, der_hc, color = (0.7, 0.7, 0.7), linewidth = 3)
+        axs[i].plot(t, der_bc, color = (0, 0, 0), linewidth = 1)
+
+        axs[i].set_title(f"{ID}")
+        axs[i].set_xlabel("Time [s]")
+        axs[i].set_ylabel("Power [W]")
+
+    legend_labels = ["Handcycle", "Bicycle"]
+    legend_colors = [(0.4, 0.4, 0.4), (0, 0, 0)] 
+    legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
+    fig.legend(legend_handles, legend_labels, loc='lower right')
+
+    axs[i].axis('tight')
+
+    if j == 0:
+        fig.suptitle("First derivative")
+    elif j == 1:
+        fig.suptitle("Second derivative")
+
