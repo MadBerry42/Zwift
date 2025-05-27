@@ -6,18 +6,16 @@ import math
 
 '''Conversion of a .fit file into a .csv file'''
 # Choose before running the code
-ID = 18
-Setup = 'handcycle'
+Setup = 'bicycle'
+ID = f"020"
 
-path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - FTP tests data"
-if ID < 10:
-    directory = f'{path}\\00{ID}\\Zwift' #Path of the folder which will contain the output .csv file
-    file_input= f'{path}\\00{ID}\\Zwift\\00{ID}_{Setup}_FTP.fit' #Path of the input .fit file
-    file_output = f'{path}\\00{ID}_{Setup}_FTP.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
-else:
-    file_input= f'{path}\\0{ID}\\Zwift\\0{ID}_{Setup}_FTP.fit' #Path of the input .fit file
-    directory = f'{path}\\0{ID}\\Zwift' #Path of the folder which will contain the output .csv file
-    file_output = f'{path}\\0{ID}\\Zwift\\0{ID}_{Setup}_FTP.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
+# path = r"C:\Users\maddy\Desktop\NTNU\Julia Kathrin Baumgart - Protocol Data"
+# path = r"C:\Users\maddy\Desktop\NTNU\Roya Doshmanziari - Maddalena_ Riccardo Master projects 2024-2025\Test Arduino\Acquisitions\%s\Zwift" %ID
+path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - FTP tests data\\{ID}\\Zwift"
+
+directory = f'{path}' #Path of the folder which will contain the output .csv file
+file_input= f'{path}\\{ID}_{Setup}_FTP.fit' #Path of the input .fit file
+file_output = f'{path}\\{ID}_{Setup}_FTP.csv' #Name of the output file (DON'T FORGET .CSV AT THE END!)
 # Importing the file
 fitfile = fitparse.FitFile(file_input)
 
