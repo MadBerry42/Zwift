@@ -8,8 +8,8 @@ from scipy.signal import savgol_filter
 
 # Import data
 participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 19, 20]
-path = f"C:\\Users\\maddy\\Desktop\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
-# path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
+# path = f"C:\\Users\\maddy\\Desktop\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
+path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data"
 
 # Assign constant values
 n_rows = 4
@@ -351,37 +351,94 @@ print("File has been succesfully saved!")'''
 #-------------------------------------------------------------------------------------------------------------------------------------------------------
     # Observe the derivatives of the signal
 #-------------------------------------------------------------------------------------------------------------------------------------------------------
-win_length = 100
-order_pol = 4
+# Subplots
+fig, axs = plt.subplots(1, 2)
+participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 19, 20]
+requested = [20]
 
-for j in range(2):
-    fig, axs = plt.subplots(n_rows, n_cols)
-    axs = axs.flatten()
-    for i, ID in enumerate(participants):
-        ID = f"{ID:03}"
-        power_hc = pd.read_excel(f"{path}\\Input to models\\Power Output models\\{ID}_Input_handcycle_raw.xlsx", usecols = ["Power"])
-        power_bc = pd.read_excel(f"{path}\\Input to models\\Power Output models\\{ID}_Input_bicycle_raw.xlsx", usecols = ["Power"]) 
+# First derivative
+for i, ID in enumerate(requested):
+    ID = f"{ID:03}"
 
-        der_hc = savgol_filter(np.array(power_hc).flatten(), win_length, order_pol, deriv = j + 1)
-        der_bc = savgol_filter(np.array(power_bc).flatten(), win_length, order_pol, deriv = j + 1)
-        t = np.linspace(0, 1079, 1080)
+    '''path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - FTP tests data\\{ID}\\Zwift"
+    power_hc = pd.read_csv(f"{path}\\{ID}_handcycle_FTP.csv", usecols= ["Power"])
+    power_bc = pd.read_csv(f"{path}\\{ID}_bicycle_FTP.csv", usecols= ["Power"])
+    power_bc = power_bc[480 : 1000]
+    power_hc = power_hc[480 : 1000]'''
 
-        axs[i].plot(t, der_hc, color = (0.7, 0.7, 0.7), linewidth = 3)
-        axs[i].plot(t, der_bc, color = (0, 0, 0), linewidth = 1)
+    path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - Protocol Data\\Input to models\\Power Output models\\"
+    power_bc = pd.read_excel(f"{path}\\{ID}_Input_file_filtered.xlsx", usecols = ["Power bc mav"])
+    power_hc = pd.read_excel(f"{path}\\{ID}_Input_file_filtered.xlsx", usecols = ["Power hc mav"])
 
-        axs[i].set_title(f"{ID}")
-        axs[i].set_xlabel("Time [s]")
-        axs[i].set_ylabel("Power [W]")
+    power_bc = power_bc[100:500]
+    power_hc = power_hc[100:500]
+     
+    power_bc_sg = savgol_filter(np.array(power_bc).flatten(), 100, 4, deriv = 1)
+    power_hc_sg = savgol_filter(np.array(power_hc).flatten(), 100, 4, deriv = 1)
 
-    legend_labels = ["Handcycle", "Bicycle"]
-    legend_colors = [(0.4, 0.4, 0.4), (0, 0, 0)] 
-    legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) for color in legend_colors]
-    fig.legend(legend_handles, legend_labels, loc='lower right')
+    t = np.linspace(100, 499, 400)
+    axs[0].plot(t, power_bc, color = "blue", linewidth = 3)
+    axs[0].plot(t, power_hc, color = "red", linewidth = 1)
+    axs[0].set_xlabel("Time [s]")
+    axs[0].set_ylabel(r"$\Delta$Power [W/s]")
+    axs[0].grid()
 
-    axs[i].axis('tight')
+    axs[1].plot(t, power_bc_sg, color = (0.5, 0.5, 0.5), linewidth = 3)
+    axs[1].plot(t, power_hc_sg, color = (0, 0, 0), linewidth = 1)
+    axs[1].set_xlabel("Time [s]")
+    axs[1].set_ylabel(r"$\Delta$Power [W/s]")
+    axs[1].grid()
 
-    if j == 0:
-        fig.suptitle("First derivative")
-    elif j == 1:
-        fig.suptitle("Second derivative")
+    legend_labels = ["Bicycle", "Handcycle"]
+    legend_colors = [(0.5, 0.5, 0.5), (0, 0, 0)] 
+    legend_handles = [Line2D([0], [0], marker='.', color='w', markerfacecolor=color, markersize=20) for color in legend_colors]
+    plt.legend(legend_handles, legend_labels, loc='upper left', prop={"size": 15})
+
+plt.suptitle("First Derivative of the signal")
+
+# Plots, FTP test
+fig, axs = plt.subplots(1, 2)
+participants = [0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 19, 20]
+requested = [12]
+
+
+# First derivative
+for i, ID in enumerate(requested):
+    ID = f"{ID:03}"
+
+    path = f"C:\\Users\\maddalb\\NTNU\\Julia Kathrin Baumgart - FTP tests data\\{ID}\\Zwift"
+    power_hc = pd.read_csv(f"{path}\\{ID}_handcycle_FTP.csv", usecols= ["Power"])
+    power_bc = pd.read_csv(f"{path}\\{ID}_bicycle_FTP.csv", usecols= ["Power"])
+
+    # Filter power
+    window_size = 5
+    window = np.ones(window_size) / window_size
+    window = window.flatten()
+    power_bc = np.convolve(np.array(power_bc).flatten(), window, mode = "same")
+    power_hc = np.convolve(np.array(power_hc).flatten(), window, mode = "same")
+
+    power_hc = power_hc[480 : 780]
+    power_bc = power_bc[300 : 600]
+
+    power_bc_sg = savgol_filter(np.array(power_bc).flatten(), 100, 4, deriv = 1)
+    power_hc_sg = savgol_filter(np.array(power_hc).flatten(), 100, 4, deriv = 1)
+
+    t = np.linspace(0, len(power_bc) - 1, len(power_bc))
+    axs[1].plot(t, power_bc_sg, color = (0.5, 0.5, 0.5), linewidth = 3, label = "Bicycle")
+    axs[1].plot(t, power_hc_sg, color = (0, 0, 0), linewidth = 1, label = "Handcycle")
+    axs[1].set_xlabel("Time [s]")
+    axs[1].set_ylabel(r"$\Delta$Power [W/s]")
+    axs[1].set_title("First derivative of the signal")
+    axs[1].legend()
+    axs[1].grid()
+
+    axs[0].plot(t, power_bc, color = "blue", label = "Bicycle")
+    axs[0].plot(t, power_hc, color = "red", label = "Handcycle")
+    axs[0].set_xlabel("Time [s]")
+    axs[0].set_ylabel(r"$\Delta$Power [W/s]")
+    axs[0].set_title("Raw Data")
+    axs[0].legend()
+    axs[0].grid()
+
+    
 
