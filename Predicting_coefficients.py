@@ -21,7 +21,7 @@ for i, ID in enumerate(participants):
     X_training = database.loc[database["ID"] != ID, ["Age", "Gender", "Height", "Weight"]]
     y_training = database.loc[database["ID"] != ID, ["Alpha mav", "Beta mav"]]
     X_test = database.loc[database["ID"] == ID, ["Age", "Gender", "Height", "Weight"]]
-    y_test = np.array(database.loc[database["ID"] == ID, ["Alpha mav", "Beta mav"]])
+    y_test = database.loc[database["ID"] == ID, ["Alpha mav", "Beta mav"]]
 
     scaler_y = MinMaxScaler()
     scaler_x = MinMaxScaler()
@@ -32,28 +32,47 @@ for i, ID in enumerate(participants):
 
     print('RandomForest tuning')
 
-    model = sklearn.multioutput.MultiOutputRegressor(sklearn.ensemble.RandomForestRegressor(n_estimators = 100, random_state = 42))
+    # Modello unico
+    '''model = sklearn.multioutput.MultiOutputRegressor(sklearn.ensemble.RandomForestRegressor(n_estimators = 100, random_state = 42))
     model.fit(X_train, y_train)
 
     # Predict output
     predicted = model.predict(X_test)
-    predicted = pd.DataFrame(scaler_y.inverse_transform(predicted))
+    predicted = pd.DataFrame(scaler_y.inverse_transform(predicted))'''
+
+    # Due modelli per alpha e beta
+    model_alpha = sklearn.ensemble.RandomForestRegressor(n_estimators = 100, random_state = 42)
+    model_alpha.fit(X_train, y_train["Alpha mav"])
+    model_beta = sklearn.ensemble.RandomForestRegressor(n_estimators = 100, random_state = 42)
+    model_beta.fit(X_train, y_train["Beta mav"])
+
+    predicted_alpha = model_alpha.predict(X_test)
+    predicted_beta = model_beta.predict(X_test)
+
+    # Descaling
+    min_alpha = scaler_y.data_min_[0]
+    max_alpha = scaler_y.data_max_[0]
+    min_beta = scaler_y.data_min_[1]
+    max_beta = scaler_y.data_max_[1]
+
+    predicted_alpha = predicted_alpha * (max_alpha - min_alpha) + min_alpha
+    predicted_beta = predicted_beta * (max_beta - min_beta) + min_beta
 
     if i == 0:
         df = pd.DataFrame({"Method": "RandomForest",
                            "ID":f"{ID:03}", 
-                           "Alpha predicted": predicted[0], "Actual alpha": y_test["Alpha mav"],
-                           "Beta predicted": predicted[1], "Actual beta": y_test["Beta mav"]
+                           "Alpha predicted": predicted_alpha, "Actual alpha": y_test["Alpha mav"],
+                           "Beta predicted": predicted_beta, "Actual beta": y_test["Beta mav"]
                            })
     else:
         tmp = pd.DataFrame({"Method": " ",
                            "ID":f"{ID:03}", 
-                           "Alpha predicted": predicted[0], "Actual alpha": y_test["Alpha mav"],
-                           "Beta predicted": predicted[1], "Actual beta": y_test["Beta mav"]
+                           "Alpha predicted": predicted_alpha, "Actual alpha": y_test["Alpha mav"].reset_index(drop = True),
+                           "Beta predicted": predicted_beta, "Actual beta": y_test["Beta mav"].reset_index(drop = True)
                            })
         df = pd.concat([df, tmp], axis = 0)
 
-
+print(df)
 #-----------------------------------------------------------------------------------------------------------------------------------------------
     # SVR
 #-----------------------------------------------------------------------------------------------------------------------------------------------
